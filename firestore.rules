@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Photos collection - public read for hospitality showcase, allow write for guests and managers
+    match /photos/{photoId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.propertyId in ['gangtok', 'kalyani']
+                            && request.resource.data.url is string;
+      allow delete: if true;
+    }
+
+    // Customer bookings and reservations
+    match /bookings/{bookingId} {
+      allow read: if true;
+      allow create: if request.resource.data.guestName is string
+                    && request.resource.data.guestPhone is string;
+      allow update, delete: if true;
+    }
+
+    // Customer inquiries and feedback
+    match /customerInquiries/{inquiryId} {
+      allow read: if true;
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.phone is string;
+      allow update, delete: if true;
+    }
+
+    // Permanent room and common-area gallery photos
+    match /galleryPhotos/{photoId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // Room pricing rates across all properties
+    match /roomPricing/{roomId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+  }
+}

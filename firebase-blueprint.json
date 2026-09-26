@@ -1,0 +1,80 @@
+{
+  "$schema": "https://firebase.google.com/schemas/firestore/blueprint.json",
+  "entities": {
+    "photos": {
+      "fields": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string", "enum": ["gangtok", "kalyani"] },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "caption": { "type": "string" },
+        "tag": { "type": "string" },
+        "addedAt": { "type": "number" },
+        "addedBy": { "type": "string" }
+      }
+    },
+    "bookings": {
+      "fields": {
+        "bookingRef": { "type": "string" },
+        "propertyId": { "type": "string", "enum": ["gangtok", "kalyani"] },
+        "propertyName": { "type": "string" },
+        "roomId": { "type": "string" },
+        "roomName": { "type": "string" },
+        "guestName": { "type": "string" },
+        "guestPhone": { "type": "string" },
+        "guestEmail": { "type": "string" },
+        "checkInDate": { "type": "string" },
+        "checkOutDate": { "type": "string" },
+        "nights": { "type": "number" },
+        "adults": { "type": "number" },
+        "childrenCount": { "type": "number" },
+        "purpose": { "type": "string" },
+        "specialNeeds": { "type": "string" },
+        "selectedAddOns": { "type": "array" },
+        "baseTariff": { "type": "number" },
+        "addOnsTotal": { "type": "number" },
+        "subTotal": { "type": "number" },
+        "gst": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "status": { "type": "string", "enum": ["confirmed", "checked-in", "completed", "cancelled"] },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "customerInquiries": {
+      "fields": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "source": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "galleryPhotos": {
+      "fields": {
+        "id": { "type": "string" },
+        "galleryId": { "type": "string" },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "caption": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "uploadedAt": { "type": "string" },
+        "timestamp": { "type": "number" }
+      }
+    },
+    "roomPricing": {
+      "fields": {
+        "roomId": { "type": "string" },
+        "propertyId": { "type": "string", "enum": ["gangtok", "kalyani"] },
+        "roomName": { "type": "string" },
+        "pricePerNight": { "type": "number" },
+        "updatedAt": { "type": "string" },
+        "updatedTimestamp": { "type": "number" }
+      }
+    }
+  }
+}

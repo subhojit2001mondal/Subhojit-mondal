@@ -1,0 +1,8 @@
+{
+  "name": "Remix Parijai Group — Hotels \u0026 Residencies",
+  "description": "Thoughtful Hospitality, Dedicated Care. Luxury mountain stays at Trikuta Residency Gangtok and specialized medical convenience at Hotel Parijaye near AIIMS Kalyani.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
