@@ -289,7 +289,9 @@ function MainAppContent() {
 }
 
 export default function App() {
-  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const mapsApiKey =
+    import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+    'AIzaSyDEeV4BvWaDdzCdlfgJ6q4nQznupoX2AHs';
 
   return (
     <APIProvider apiKey={mapsApiKey} libraries={['places', 'marker']}>
