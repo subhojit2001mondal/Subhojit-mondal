@@ -24,7 +24,7 @@ export const HelpChatBubble: React.FC<HelpChatBubbleProps> = ({
   );
 
   return (
-    <div className="fixed bottom-24 md:bottom-6 right-3 sm:right-6 z-40">
+    <div className="fixed bottom-[112px] md:bottom-6 right-3 sm:right-6 z-40">
       {isOpen ? (
         <div
           className={`border rounded-2xl shadow-2xl w-80 sm:w-88 p-4 animate-in fade-in slide-in-from-bottom-3 duration-200 transition-colors ${
@@ -89,7 +89,7 @@ export const HelpChatBubble: React.FC<HelpChatBubbleProps> = ({
             >
               <div className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-amber-500" />
-                <span>Call Desk: {activePhone}</span>
+                <span>Call Reception Desk</span>
               </div>
               <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
             </a>

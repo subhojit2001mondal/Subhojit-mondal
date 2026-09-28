@@ -66,6 +66,8 @@ import {
 import { useContact } from '../context/ContactContext';
 import { useTouristSpots } from '../context/TouristSpotsContext';
 import { DEFAULT_ROOM_PRICES, ROOMS } from '../data/hotels';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 import { ParijaiLogo } from './ParijaiLogo';
 
 // =========================================================================
@@ -231,7 +233,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // -------------------------------------------------------------
   // SIMPLE PASSWORD AUTHENTICATION ACTIONS
   // -------------------------------------------------------------
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordInput.trim()) {
       setPasswordError('Please enter the password.');
@@ -243,21 +245,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
     // Exact check against the configured ADMIN_PASSWORD
     if (passwordInput.trim() === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
       try {
-        sessionStorage.setItem('parijay_admin_auth', 'true');
-      } catch {
-        // ignore
+        await signInWithEmailAndPassword(auth, 'admin@parijay.com', passwordInput.trim());
+        setIsAuthenticated(true);
+        try {
+          sessionStorage.setItem('parijay_admin_auth', 'true');
+        } catch {
+          // ignore
+        }
+        setPasswordInput('');
+        setPasswordError(null);
+      } catch (err: any) {
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-login-credentials') {
+          setPasswordError('Security Setup Required: Please create the account "admin@parijay.com" with your password in Firebase Authentication.');
+        } else {
+          setPasswordError('Firebase Auth Error: ' + (err.message || err));
+        }
       }
-      setPasswordInput('');
-      setPasswordError(null);
     } else {
       setPasswordError('Incorrect password. Access denied.');
     }
     setIsSubmittingPassword(false);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn('Firebase sign out error:', err);
+    }
     setIsAuthenticated(false);
     try {
       sessionStorage.removeItem('parijay_admin_auth');

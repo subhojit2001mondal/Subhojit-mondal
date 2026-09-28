@@ -57,8 +57,8 @@ export const MobileFloatingDock: React.FC<MobileFloatingDockProps> = ({
               <span className="font-bold text-[11px] xs:text-xs text-white tracking-tight whitespace-nowrap">
                 Call Desk
               </span>
-              <span className="text-[8.5px] xs:text-[9.5px] font-mono text-emerald-300/90 truncate">
-                {activePhone}
+              <span className="text-[8.5px] xs:text-[9.5px] font-sans text-emerald-300/90 truncate">
+                Tap to Dial
               </span>
             </div>
           </a>

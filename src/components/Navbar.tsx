@@ -589,7 +589,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
                         >
                           <PhoneCall className="w-4 h-4 text-amber-400" />
-                          <span>Call Reception ({activePhone})</span>
+                          <span>Call Reception Desk</span>
                         </a>
 
                         {onOpenAdminPanel && (

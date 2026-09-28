@@ -1,41 +1,389 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: bookings
+    //   - id: string
+    //   - bookingRef: string
+    //   - propertyId: string
+    //   - propertyName: string
+    //   - roomId: string
+    //   - roomName: string
+    //   - guestName: string
+    //   - guestPhone: string
+    //   - guestEmail: string
+    //   - checkInDate: string
+    //   - checkOutDate: string
+    //   - nights: number
+    //   - adults: number
+    //   - childrenCount: number
+    //   - purpose: string
+    //   - specialNeeds: string (optional)
+    //   - selectedAddOns: list
+    //   - baseTariff: number
+    //   - addOnsTotal: number
+    //   - subTotal: number
+    //   - gst: number
+    //   - grandTotal: number
+    //   - paymentMethod: string
+    //   - status: string
+    //   - createdAt: string
+    //   - createdTimestamp: number (optional)
+    //
+    // Collection: customerInquiries
+    //   - id: string
+    //   - name: string
+    //   - phone: string
+    //   - email: string (optional)
+    //   - propertyId: string (optional)
+    //   - subject: string
+    //   - message: string
+    //   - source: string
+    //   - status: string
+    //   - createdAt: string
+    //
+    // Collection: galleryPhotos
+    //   - id: string
+    //   - galleryId: string
+    //   - url: string
+    //   - title: string
+    //   - caption: string (optional)
+    //   - storagePath: string (optional)
+    //   - uploadedAt: string
+    //   - timestamp: number
+    //
+    // Collection: photos
+    //   - id: string
+    //   - propertyId: string
+    //   - url: string
+    //   - title: string
+    //   - caption: string (optional)
+    //   - tag: string (optional)
+    //   - addedAt: number
+    //   - addedBy: string (optional)
+    //   - updatedAt: number (optional)
+    //
+    // Collection: roomPricing
+    //   - roomId: string
+    //   - propertyId: string
+    //   - roomName: string
+    //   - pricePerNight: number
+    //   - updatedAt: string
+    //   - updatedTimestamp: number
+    //
+    // Collection: contactNumbers
+    //   - id: string
+    //   - label: string
+    //   - phoneNumber: string
+    //   - property: string
+    //   - purpose: string
+    //   - isPrimary: bool
+    //   - updatedAt: string (optional)
+    //   - updatedTimestamp: number (optional)
+    //
+    // Collection: touristSpots
+    //   - id: string
+    //   - name: string
+    //   - description: string
+    //   - photoUrl: string (optional)
+    //   - distance: string (optional)
+    //   - isVisible: bool
+    //   - order: number
+    //   - createdAt: string (optional)
+    //   - updatedAt: string (optional)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+       return request.auth != null;
+    }
+
+    function isAdmin() {
+       return isAuthenticated() && request.auth.token.email == 'admin@parijay.com';
+    }
+
+    function hasRequiredFields(fields) {
+       return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+       return request.resource.data[field] is string &&
+         request.resource.data[field].size() >= minLen &&
+         request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidUrl(url) {
+       return url is string &&
+         (url == '' || url.matches("^https://.*") || url.matches("^http://.*") || url.matches("^/.*"));
+    }
+
+    function isValidEmail(email) {
+       return email is string &&
+         email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    function isValidOptionalEmail(field) {
+      return !(field in request.resource.data) ||
+             (isValidEmail(request.resource.data[field]) && request.resource.data[field].size() <= 100);
+    }
+
+    function isValidOptionalNumber(field) {
+      return !(field in request.resource.data) ||
+             request.resource.data[field] is number;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidBookingRecord() {
+      let data = request.resource.data;
+      let allowedFields = [
+        'id', 'bookingRef', 'propertyId', 'propertyName', 'roomId', 'roomName', 
+        'guestName', 'guestPhone', 'guestEmail', 'checkInDate', 'checkOutDate', 
+        'nights', 'adults', 'childrenCount', 'purpose', 'specialNeeds', 
+        'selectedAddOns', 'baseTariff', 'addOnsTotal', 'subTotal', 'gst', 
+        'grandTotal', 'paymentMethod', 'status', 'createdAt', 'createdTimestamp'
+      ];
+      let requiredFields = [
+        'id', 'bookingRef', 'propertyId', 'propertyName', 'roomId', 'roomName', 
+        'guestName', 'guestPhone', 'guestEmail', 'checkInDate', 'checkOutDate', 
+        'nights', 'adults', 'childrenCount', 'purpose', 
+        'selectedAddOns', 'baseTariff', 'addOnsTotal', 'subTotal', 'gst', 
+        'grandTotal', 'paymentMethod', 'status', 'createdAt'
+      ];
+      
+      return hasRequiredFields(requiredFields) &&
+             hasOnlyAllowedFields(allowedFields) &&
+             validStringLength('id', 1, 100) &&
+             validStringLength('bookingRef', 1, 100) &&
+             validStringLength('propertyId', 1, 50) &&
+             validStringLength('propertyName', 1, 100) &&
+             validStringLength('roomId', 1, 100) &&
+             validStringLength('roomName', 1, 100) &&
+             validStringLength('guestName', 1, 100) &&
+             validStringLength('guestPhone', 1, 50) &&
+             validStringLength('guestEmail', 1, 100) &&
+             validStringLength('checkInDate', 1, 50) &&
+             validStringLength('checkOutDate', 1, 50) &&
+             data.nights is number &&
+             data.adults is number &&
+             data.childrenCount is number &&
+             validStringLength('purpose', 1, 50) &&
+             isValidOptionalString('specialNeeds', 0, 1000) &&
+             data.selectedAddOns is list && data.selectedAddOns.size() <= 20 &&
+             data.baseTariff is number &&
+             data.addOnsTotal is number &&
+             data.subTotal is number &&
+             data.gst is number &&
+             data.grandTotal is number &&
+             validStringLength('paymentMethod', 1, 50) &&
+             validStringLength('status', 1, 50) &&
+             validStringLength('createdAt', 1, 50) &&
+             isValidOptionalNumber('createdTimestamp');
+    }
+
+    function isValidCustomerInquiry() {
+      let data = request.resource.data;
+      let allowedFields = [
+        'id', 'name', 'phone', 'email', 'propertyId', 'subject', 'message', 'source', 'status', 'createdAt'
+      ];
+      let requiredFields = [
+        'id', 'name', 'phone', 'subject', 'message', 'source', 'status', 'createdAt'
+      ];
+
+      return hasRequiredFields(requiredFields) &&
+             hasOnlyAllowedFields(allowedFields) &&
+             validStringLength('id', 1, 100) &&
+             validStringLength('name', 1, 100) &&
+             validStringLength('phone', 1, 50) &&
+             validStringLength('subject', 1, 200) &&
+             validStringLength('message', 1, 5000) &&
+             validStringLength('source', 1, 50) &&
+             validStringLength('status', 1, 50) &&
+             validStringLength('createdAt', 1, 50) &&
+             isValidOptionalEmail('email') &&
+             isValidOptionalString('propertyId', 1, 50);
+    }
+
+    function isValidGalleryPhoto() {
+      let data = request.resource.data;
+      let allowedFields = [
+        'id', 'galleryId', 'url', 'title', 'caption', 'storagePath', 'uploadedAt', 'timestamp'
+      ];
+      let requiredFields = [
+        'id', 'galleryId', 'url', 'title', 'uploadedAt', 'timestamp'
+      ];
+
+      return hasRequiredFields(requiredFields) &&
+             hasOnlyAllowedFields(allowedFields) &&
+             validStringLength('id', 1, 100) &&
+             validStringLength('galleryId', 1, 100) &&
+             isValidUrl(data.url) &&
+             validStringLength('title', 0, 200) &&
+             validStringLength('uploadedAt', 1, 50) &&
+             data.timestamp is number &&
+             isValidOptionalString('caption', 0, 1000) &&
+             isValidOptionalString('storagePath', 0, 500);
+    }
+
+    function isValidDatabasePhoto() {
+      let data = request.resource.data;
+      let allowedFields = [
+        'id', 'propertyId', 'url', 'title', 'caption', 'tag', 'addedAt', 'addedBy', 'updatedAt'
+      ];
+      let requiredFields = [
+        'id', 'propertyId', 'url', 'title', 'addedAt'
+      ];
+
+      return hasRequiredFields(requiredFields) &&
+             hasOnlyAllowedFields(allowedFields) &&
+             validStringLength('id', 1, 100) &&
+             validStringLength('propertyId', 1, 50) &&
+             isValidUrl(data.url) &&
+             validStringLength('title', 0, 200) &&
+             data.addedAt is number &&
+             isValidOptionalString('caption', 0, 1000) &&
+             isValidOptionalString('tag', 0, 100) &&
+             isValidOptionalString('addedBy', 0, 100) &&
+             isValidOptionalNumber('updatedAt');
+    }
+
+    function isValidRoomPriceRecord() {
+      let data = request.resource.data;
+      let allowedFields = [
+        'roomId', 'propertyId', 'roomName', 'pricePerNight', 'updatedAt', 'updatedTimestamp'
+      ];
+
+      return hasRequiredFields(allowedFields) &&
+             hasOnlyAllowedFields(allowedFields) &&
+             validStringLength('roomId', 1, 100) &&
+             validStringLength('propertyId', 1, 50) &&
+             validStringLength('roomName', 1, 100) &&
+             data.pricePerNight is number &&
+             validStringLength('updatedAt', 1, 50) &&
+             data.updatedTimestamp is number;
+    }
+
+    function isValidContactNumber() {
+      let data = request.resource.data;
+      let allowedFields = [
+        'id', 'label', 'phoneNumber', 'property', 'purpose', 'isPrimary', 'updatedAt', 'updatedTimestamp'
+      ];
+      let requiredFields = [
+        'id', 'label', 'phoneNumber', 'property', 'purpose', 'isPrimary'
+      ];
+
+      return hasRequiredFields(requiredFields) &&
+             hasOnlyAllowedFields(allowedFields) &&
+             validStringLength('id', 1, 100) &&
+             validStringLength('label', 1, 150) &&
+             validStringLength('phoneNumber', 1, 50) &&
+             validStringLength('property', 1, 50) &&
+             validStringLength('purpose', 1, 50) &&
+             data.isPrimary is bool &&
+             isValidOptionalString('updatedAt', 1, 50) &&
+             isValidOptionalNumber('updatedTimestamp');
+    }
+
+    function isValidTouristSpot() {
+      let data = request.resource.data;
+      let allowedFields = [
+        'id', 'name', 'description', 'photoUrl', 'distance', 'isVisible', 'order', 'createdAt', 'updatedAt'
+      ];
+      let requiredFields = [
+        'id', 'name', 'description', 'isVisible', 'order'
+      ];
+
+      return hasRequiredFields(requiredFields) &&
+             hasOnlyAllowedFields(allowedFields) &&
+             validStringLength('id', 1, 100) &&
+             validStringLength('name', 1, 200) &&
+             validStringLength('description', 0, 2000) &&
+             data.isVisible is bool &&
+             data.order is number &&
+             isValidOptionalString('photoUrl', 0, 500) &&
+             isValidOptionalString('distance', 0, 200) &&
+             isValidOptionalString('createdAt', 1, 50) &&
+             isValidOptionalString('updatedAt', 1, 50);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
     // Customer bookings collection
     match /bookings/{bookingId} {
-      allow read, write: if true;
+      allow read: if isAdmin();
+      allow create: if isValidBookingRecord();
+      allow update: if isAdmin() && isValidBookingRecord();
+      allow delete: if isAdmin();
     }
 
     // Customer inquiries collection
     match /customerInquiries/{inquiryId} {
-      allow read, write: if true;
+      allow read: if isAdmin();
+      allow create: if isValidCustomerInquiry();
+      allow update: if isAdmin() && isValidCustomerInquiry();
+      allow delete: if isAdmin();
     }
 
     // Legacy/direct photo records
     match /photos/{photoId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isAdmin() && isValidDatabasePhoto();
+      allow update: if isAdmin() && isValidDatabasePhoto();
+      allow delete: if isAdmin();
     }
 
     // Permanent room and common-area gallery photos
     match /galleryPhotos/{photoId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isAdmin() && isValidGalleryPhoto();
+      allow update: if isAdmin() && isValidGalleryPhoto();
+      allow delete: if isAdmin();
     }
 
     // Room pricing rates
     match /roomPricing/{roomId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isAdmin() && isValidRoomPriceRecord();
+      allow update: if isAdmin() && isValidRoomPriceRecord();
+      allow delete: if isAdmin();
     }
 
     // Editable contact numbers
     match /contactNumbers/{contactId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isAdmin() && isValidContactNumber();
+      allow update: if isAdmin() && isValidContactNumber();
+      allow delete: if isAdmin();
     }
 
     // Editable tourist spots collection
     match /touristSpots/{spotId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isAdmin() && isValidTouristSpot();
+      allow update: if isAdmin() && isValidTouristSpot();
+      allow delete: if isAdmin();
     }
   }
 }
-
-
