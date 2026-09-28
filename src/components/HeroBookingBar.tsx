@@ -178,6 +178,10 @@ export const HeroBookingBar: React.FC<HeroBookingBarProps> = ({
   const isGangtok = selectedProperty === 'gangtok';
   const slides = isGangtok ? GANGTOK_VIEWPOINT_SLIDES : KALYANI_VIEWPOINT_SLIDES;
 
+  const hotelName = isGangtok ? 'Trikuta Residency' : 'Hotel Parijaye';
+  const hotelLocation = isGangtok ? 'Gangtok' : 'Kalyani';
+  const groupEyebrow = 'Parijay Group of Hotels';
+
   // Reset slide index when property changes
   useEffect(() => {
     setSlideIndex(0);
@@ -237,21 +241,24 @@ export const HeroBookingBar: React.FC<HeroBookingBarProps> = ({
       <div className="relative z-30 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* CENTERED HERO TEXT */}
         <div className="pt-12 pb-16 sm:pt-20 sm:pb-24 md:pt-28 md:pb-32 flex flex-col items-center justify-center text-center">
-          {/* Three lines of static text stacked, in polished luxury gold & champagne texture */}
-          <div className="flex flex-col items-center justify-center text-center max-w-5xl mx-auto px-4 select-none">
+          {/* Centered text dynamically reflecting the chosen hotel */}
+          <div
+            key={selectedProperty}
+            className="flex flex-col items-center justify-center text-center max-w-5xl mx-auto px-4 select-none animate-in fade-in zoom-in-95 duration-500"
+          >
             {/* 3. Top eyebrow / label */}
             <span className="font-brand-cinzel text-xs sm:text-sm md:text-base lg:text-lg font-semibold uppercase tracking-[0.35em] text-[#FBD365] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-              Parijai Group of Hotels
+              {groupEyebrow}
             </span>
 
             {/* 2. Primary large heading, the main focal point */}
             <h1 className="mt-2.5 sm:mt-4 text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-brand-cinzel font-bold tracking-tight hero-luxury-gold-heading leading-[1.12]">
-              Trikuta Residency
+              {hotelName}
             </h1>
 
             {/* 1. Supporting location line directly beneath */}
             <p className="mt-2 sm:mt-3.5 text-xl sm:text-2xl md:text-3xl lg:text-4xl font-brand-garamond italic tracking-[0.25em] text-[#FFE89E] font-medium drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)]">
-              Gangtok
+              {hotelLocation}
             </p>
           </div>
         </div>
