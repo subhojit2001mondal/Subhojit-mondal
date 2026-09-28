@@ -453,6 +453,19 @@ function ShortMapPolyline({
   return null;
 }
 
+// Component to focus on hotel when no destination is selected
+function HotelCenterFocus({ center }: { center: { lat: number; lng: number } }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    map.panTo(center);
+    map.setZoom(15);
+  }, [map, center]);
+
+  return null;
+}
+
 interface InteractiveMapSectionProps {
   selectedProperty?: 'gangtok' | 'kalyani';
 }
@@ -475,10 +488,8 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
   const [customPlaces, setCustomPlaces] = useState<Landmark[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Active selected landmark
-  const [selectedLandmarkId, setSelectedLandmarkId] = useState<string>(
-    selectedProperty === 'gangtok' ? 'g-mgmarg' : 'k-aiims-opd'
-  );
+  // Active selected landmark (null = no destination selected, pointing to our hotel)
+  const [selectedLandmarkId, setSelectedLandmarkId] = useState<string | null>(null);
 
   // InfoWindow open state
   const [isInfoWindowOpen, setIsInfoWindowOpen] = useState(true);
@@ -494,7 +505,7 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
 
   // Reset states when property switches
   useEffect(() => {
-    setSelectedLandmarkId(selectedProperty === 'gangtok' ? 'g-mgmarg' : 'k-aiims-opd');
+    setSelectedLandmarkId(null);
     setSearchQuery('');
     setSelectedCategory('all');
     setCustomPlaces([]);
@@ -574,12 +585,20 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
   }, [allLandmarks, selectedCategory, searchQuery]);
 
   const activeLandmark = useMemo(() => {
-    return (
-      allLandmarks.find((l) => l.id === selectedLandmarkId) ||
-      allLandmarks.find((l) => l.id === 'g-mgmarg') ||
-      allLandmarks[0]
-    );
+    if (!selectedLandmarkId) return null;
+    return allLandmarks.find((l) => l.id === selectedLandmarkId) || null;
   }, [allLandmarks, selectedLandmarkId]);
+
+  // Verified Place ID for each hotel
+  const hotelPlaceId =
+    data.id === 'gangtok'
+      ? 'ChIJAbwjQaml5jkRSnAnIAoGTb8'
+      : 'ChIJNTEnCgC_-DkR1MPauZ0SCkI';
+
+  // Navigation URL that guides customer from their current location directly to our hotel
+  const hotelDirectionsFromCurrentLocationUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${data.name}, ${data.address}`
+  )}&destination_place_id=${hotelPlaceId}`;
 
   // Dynamic Google Maps Places API search handler
   const handlePerformPlacesSearch = async (e?: React.FormEvent) => {
@@ -916,21 +935,26 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                 disableDefaultUI={false}
                 style={{ width: '100%', height: '100%' }}
               >
-                {/* Short Map Direct Polyline Connection */}
-                {activeLandmark && (
+                {/* Short Map Direct Polyline Connection or Hotel Center Focus */}
+                {activeLandmark ? (
                   <ShortMapPolyline
                     origin={data.center}
                     destination={{ lat: activeLandmark.lat, lng: activeLandmark.lng }}
                     isAmber={isAmber}
                   />
+                ) : (
+                  <HotelCenterFocus center={data.center} />
                 )}
 
                 {/* Hotel Origin Advanced Marker */}
                 <AdvancedMarker
                   position={data.center}
-                  title={`${data.name} (Hotel Origin)`}
-                  zIndex={40}
-                  onClick={() => setIsInfoWindowOpen(true)}
+                  title={`${data.name} (Our Hotel - Direct Navigation Point)`}
+                  zIndex={45}
+                  onClick={() => {
+                    setSelectedLandmarkId(null);
+                    setIsInfoWindowOpen(true);
+                  }}
                 >
                   <div className="relative group cursor-pointer flex flex-col items-center">
                     <span
@@ -996,6 +1020,48 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                   );
                 })}
 
+                {/* Hotel InfoWindow when NO destination is selected */}
+                {!activeLandmark && isInfoWindowOpen && (
+                  <InfoWindow
+                    position={data.center}
+                    onCloseClick={() => setIsInfoWindowOpen(false)}
+                    maxWidth={320}
+                  >
+                    <div className="p-1.5 text-slate-900">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Our Hotel · Direct Navigation
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-500 ml-auto">
+                          {data.id === 'gangtok' ? '5.0 ★ Google' : '3.3 ★ Google'}
+                        </span>
+                      </div>
+
+                      <h4 className="font-serif font-bold text-sm leading-tight text-slate-950 mb-1">
+                        ★ {data.name}
+                      </h4>
+
+                      <p className="text-[11px] text-slate-600 leading-snug mb-2">
+                        {data.address}
+                      </p>
+
+                      <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-800 font-medium mb-2.5">
+                        Opening Google Maps will navigate directly from your current location to our hotel.
+                      </div>
+
+                      <a
+                        href={hotelDirectionsFromCurrentLocationUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block text-center py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-bold shadow-md transition-all active:scale-[0.98]"
+                      >
+                        Navigate from My Location to Hotel →
+                      </a>
+                    </div>
+                  </InfoWindow>
+                )}
+
                 {/* Active Landmark InfoWindow */}
                 {activeLandmark && isInfoWindowOpen && (
                   <InfoWindow
@@ -1044,7 +1110,7 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
               </Map>
 
               {/* In-Map Short Map Metric Badge */}
-              {activeLandmark && (
+              {activeLandmark ? (
                 <div className="absolute top-3 left-3 z-10 pointer-events-none">
                   <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 text-white shadow-xl flex items-center gap-2 text-xs">
                     <span
@@ -1065,6 +1131,20 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                     </span>
                   </div>
                 </div>
+              ) : (
+                <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                  <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 text-white shadow-xl flex items-center gap-2 text-xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="font-bold text-amber-400">Hotel Pointed:</span>
+                    <span className="font-semibold truncate max-w-[160px] sm:max-w-[220px]">
+                      {data.name}
+                    </span>
+                    <span className="text-white/40">|</span>
+                    <span className="text-[10px] text-emerald-300 font-mono">
+                      Current Location Navigation
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -1073,19 +1153,135 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>
-                  Showing direct shortest route line between {data.name} and selected landmark.
+                  {activeLandmark
+                    ? `Showing direct shortest route line between ${data.name} and ${activeLandmark.name}.`
+                    : `Pointing our hotel ${data.name}. Click 'Navigate to Hotel' to open Google Maps from your current location.`}
                 </span>
               </span>
               <span className="hidden sm:inline font-mono">
-                {activeLandmark ? `${activeLandmark.lat.toFixed(4)}, ${activeLandmark.lng.toFixed(4)}` : ''}
+                {activeLandmark
+                  ? `${activeLandmark.lat.toFixed(4)}, ${activeLandmark.lng.toFixed(4)}`
+                  : `${data.center.lat.toFixed(4)}, ${data.center.lng.toFixed(4)}`}
               </span>
             </div>
           </div>
 
           {/* RIGHT 5-COLUMNS: Destination Details & Interactive Destination List */}
           <div className="lg:col-span-5 space-y-4">
-            {/* Active Destination Card */}
-            {activeLandmark && (
+            {/* Active Destination Card OR Hotel Location Navigation Card */}
+            {!activeLandmark ? (
+              <div
+                className={`p-4 sm:p-5 rounded-3xl border shadow-2xl relative overflow-hidden transition-all duration-300 ${
+                  isNight ? 'bg-[#0b1322] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
+                      isAmber
+                        ? 'bg-amber-400/10 text-amber-400 border-amber-400/50'
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/50'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    OUR HOTEL · CURRENT MAP FOCUS
+                  </span>
+
+                  <span className="text-xs text-slate-400 font-medium">
+                    {data.location}
+                  </span>
+                </div>
+
+                <h3 className={`text-xl sm:text-2xl font-serif font-bold leading-tight mb-2 ${isNight ? 'text-white' : 'text-slate-950'}`}>
+                  ★ {data.name}
+                </h3>
+                <p className="text-xs text-slate-400 mb-3.5 flex items-start gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                  <span>{data.address}</span>
+                </p>
+
+                {/* Metric highlights for our hotel */}
+                <div className="grid grid-cols-2 gap-2.5 mb-3.5">
+                  <div
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center ${
+                      isNight ? 'bg-[#070d19] border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <Compass className={`w-4 h-4 mb-1 ${isAmber ? 'text-amber-400' : 'text-emerald-400'}`} />
+                    <span className={`font-semibold text-xs sm:text-sm block leading-tight mt-0.5 ${isNight ? 'text-white' : 'text-slate-900'}`}>
+                      Turn-by-Turn GPS
+                    </span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mt-0.5">
+                      FROM YOUR LOCATION
+                    </span>
+                  </div>
+
+                  <div
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center ${
+                      isNight ? 'bg-[#070d19] border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <Star className="w-4 h-4 mb-1 text-amber-400 fill-amber-400" />
+                    <span className={`font-semibold text-xs sm:text-sm block leading-tight mt-0.5 ${isNight ? 'text-white' : 'text-slate-900'}`}>
+                      {data.id === 'gangtok' ? '5.0 ★ Google Rating' : '3.3 ★ Google Rating'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mt-0.5">
+                      VERIFIED REVIEWS
+                    </span>
+                  </div>
+                </div>
+
+                {/* Local Tip explaining that Google Maps will navigate from customer's current location */}
+                <div
+                  className={`p-3.5 sm:p-4 rounded-xl border mb-4 ${
+                    isAmber
+                      ? 'bg-amber-400/5 border-amber-400/30 text-amber-200'
+                      : 'bg-emerald-500/5 border-emerald-500/30 text-emerald-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <Navigation className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <div>
+                      <strong className="block text-[10px] uppercase tracking-wider text-amber-400">
+                        DIRECT ROUTE NAVIGATION ACTIVE:
+                      </strong>
+                      <span className="opacity-95 leading-relaxed text-xs block mt-0.5">
+                        No destination is selected. Opening Google Maps below will lead you directly from your <strong>current location</strong> to <strong>{data.name}</strong>.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Turn-by-Turn Navigation from Current Location & Front Desk CTA */}
+                <div className="flex items-center gap-2.5">
+                  <a
+                    href={hotelDirectionsFromCurrentLocationUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-lg transition-all ${
+                      isAmber
+                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 shadow-amber-500/20 active:scale-[0.99]'
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/20 active:scale-[0.99]'
+                    }`}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>Navigate to Hotel from My Location</span>
+                  </a>
+
+                  <a
+                    href={activeCallLink}
+                    className={`p-3 rounded-xl border flex items-center justify-center transition-colors shadow-xs ${
+                      isNight
+                        ? 'border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-amber-400'
+                        : 'border-slate-300 bg-slate-100 hover:bg-slate-200 text-amber-600'
+                    }`}
+                    title="Call Reception / Front Desk"
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            ) : (
               <div
                 className={`p-4 sm:p-5 rounded-3xl border shadow-2xl relative overflow-hidden transition-all duration-300 ${
                   isNight ? 'bg-[#0b1322] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -1123,9 +1319,16 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                     {activeLandmark.categoryLabel}
                   </span>
 
-                  <span className="text-xs text-slate-400 font-medium">
-                    From {data.name}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLandmarkId(null);
+                      setIsInfoWindowOpen(true);
+                    }}
+                    className="text-xs text-amber-400 hover:underline font-medium cursor-pointer"
+                  >
+                    ← Back to Hotel View
+                  </button>
                 </div>
 
                 <h3 className={`text-xl sm:text-2xl font-serif font-bold leading-tight mb-3 ${isNight ? 'text-white' : 'text-slate-950'}`}>
@@ -1245,10 +1448,72 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
             >
               <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 <span>SELECT ANY DESTINATION TO MAP</span>
-                <span>{filteredLandmarks.length} LOCATIONS</span>
+                <div className="flex items-center gap-2">
+                  {activeLandmark && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLandmarkId(null);
+                        setIsInfoWindowOpen(true);
+                      }}
+                      className="text-[10px] normal-case font-semibold px-2 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition-colors cursor-pointer"
+                    >
+                      Clear Selection
+                    </button>
+                  )}
+                  <span>{filteredLandmarks.length} LOCATIONS</span>
+                </div>
               </div>
 
               <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                {/* Option to point to Our Hotel (No destination selected) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLandmarkId(null);
+                    setIsInfoWindowOpen(true);
+                  }}
+                  className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer ${
+                    !activeLandmark
+                      ? isAmber
+                        ? 'bg-amber-400/15 text-white border-2 border-amber-400 font-semibold shadow-md'
+                        : 'bg-emerald-500/15 text-white border-2 border-emerald-400 font-semibold shadow-md'
+                      : isNight
+                      ? 'hover:bg-slate-800/60 text-slate-300 border border-dashed border-slate-700'
+                      : 'hover:bg-slate-100 text-slate-700 border border-dashed border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                        !activeLandmark
+                          ? isAmber
+                            ? 'bg-amber-400 ring-4 ring-amber-400/30 animate-pulse'
+                            : 'bg-emerald-400 ring-4 ring-emerald-400/30 animate-pulse'
+                          : 'bg-slate-500'
+                      }`}
+                    />
+                    <div className="truncate">
+                      <span className="block truncate font-bold text-xs flex items-center gap-1.5">
+                        ★ {data.name}
+                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          Our Hotel
+                        </span>
+                      </span>
+                      <span className="block text-[10px] text-slate-400 leading-none mt-0.5">
+                        Point hotel on map · Navigate from your current location
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      Hotel Point
+                    </span>
+                    <ChevronRight className={`w-3.5 h-3.5 ${!activeLandmark ? (isAmber ? 'text-amber-400' : 'text-emerald-400') : 'text-slate-500'}`} />
+                  </div>
+                </button>
+
                 {filteredLandmarks.map((item) => {
                   const isItemActive = item.id === activeLandmark?.id;
 
@@ -1257,8 +1522,13 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                       key={item.id}
                       type="button"
                       onClick={() => {
-                        setSelectedLandmarkId(item.id);
-                        setIsInfoWindowOpen(true);
+                        if (isItemActive) {
+                          setSelectedLandmarkId(null);
+                          setIsInfoWindowOpen(true);
+                        } else {
+                          setSelectedLandmarkId(item.id);
+                          setIsInfoWindowOpen(true);
+                        }
                       }}
                       className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer ${
                         isItemActive
