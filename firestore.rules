@@ -332,58 +332,37 @@ service cloud.firestore {
 
     // Customer bookings collection
     match /bookings/{bookingId} {
-      allow read: if isAdmin();
-      allow create: if isValidBookingRecord();
-      allow update: if isAdmin() && isValidBookingRecord();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Customer inquiries collection
     match /customerInquiries/{inquiryId} {
-      allow read: if isAdmin();
-      allow create: if isValidCustomerInquiry();
-      allow update: if isAdmin() && isValidCustomerInquiry();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Legacy/direct photo records
     match /photos/{photoId} {
-      allow read: if true;
-      allow create: if isAdmin() && isValidDatabasePhoto();
-      allow update: if isAdmin() && isValidDatabasePhoto();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Permanent room and common-area gallery photos
     match /galleryPhotos/{photoId} {
-      allow read: if true;
-      allow create: if isAdmin() && isValidGalleryPhoto();
-      allow update: if isAdmin() && isValidGalleryPhoto();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Room pricing rates
     match /roomPricing/{roomId} {
-      allow read: if true;
-      allow create: if isAdmin() && isValidRoomPriceRecord();
-      allow update: if isAdmin() && isValidRoomPriceRecord();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Editable contact numbers
     match /contactNumbers/{contactId} {
-      allow read: if true;
-      allow create: if isAdmin() && isValidContactNumber();
-      allow update: if isAdmin() && isValidContactNumber();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Editable tourist spots collection
     match /touristSpots/{spotId} {
-      allow read: if true;
-      allow create: if isAdmin() && isValidTouristSpot();
-      allow update: if isAdmin() && isValidTouristSpot();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
   }
 }

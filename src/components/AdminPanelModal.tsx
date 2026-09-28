@@ -66,17 +66,30 @@ import {
 import { useContact } from '../context/ContactContext';
 import { useTouristSpots } from '../context/TouristSpotsContext';
 import { DEFAULT_ROOM_PRICES, ROOMS } from '../data/hotels';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth } from '../firebase';
 import { ParijaiLogo } from './ParijaiLogo';
 
 // =========================================================================
-// ADMIN ACCESS PASSWORD CONFIGURATION
-// The simple password for admin access is set below.
-// To change the password, edit this variable directly in code.
-// No hint is shown to visitors or users.
+// ADMIN ACCESS: GROUP NAME VERIFICATION
+// Enter the group name as the password to open the admin panel.
+// No Firebase authentication, email, or complex verification required.
 // =========================================================================
-export const ADMIN_PASSWORD = 'parijay group of hotels';
+export const isMatchGroupName = (input: string): boolean => {
+  const clean = input.trim().toLowerCase().replace(/\s+/g, ' ');
+  const validNames = [
+    'parijay group of hotels',
+    'parijat group of hotels',
+    'parijay group',
+    'parijat group',
+    'parijay',
+    'parijat',
+    'parijay hotels',
+    'parijat hotels',
+    'parijaye group of hotels',
+    'parijaye group',
+    'parijaye'
+  ];
+  return validNames.includes(clean);
+};
 
 interface AdminPanelModalProps {
   isOpen: boolean;
@@ -231,49 +244,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   if (!isOpen) return null;
 
   // -------------------------------------------------------------
-  // SIMPLE PASSWORD AUTHENTICATION ACTIONS
+  // SIMPLE GROUP NAME AUTHENTICATION ACTIONS
   // -------------------------------------------------------------
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordInput.trim()) {
-      setPasswordError('Please enter the password.');
+      setPasswordError('Please enter our group name.');
       return;
     }
 
     setIsSubmittingPassword(true);
     setPasswordError(null);
 
-    // Exact check against the configured ADMIN_PASSWORD
-    if (passwordInput.trim() === ADMIN_PASSWORD) {
+    // Verify if entered password matches the name of our group
+    if (isMatchGroupName(passwordInput)) {
+      setIsAuthenticated(true);
       try {
-        await signInWithEmailAndPassword(auth, 'admin@parijay.com', passwordInput.trim());
-        setIsAuthenticated(true);
-        try {
-          sessionStorage.setItem('parijay_admin_auth', 'true');
-        } catch {
-          // ignore
-        }
-        setPasswordInput('');
-        setPasswordError(null);
-      } catch (err: any) {
-        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-login-credentials') {
-          setPasswordError('Security Setup Required: Please create the account "admin@parijay.com" with your password in Firebase Authentication.');
-        } else {
-          setPasswordError('Firebase Auth Error: ' + (err.message || err));
-        }
+        sessionStorage.setItem('parijay_admin_auth', 'true');
+      } catch {
+        // ignore
       }
+      setPasswordInput('');
+      setPasswordError(null);
     } else {
-      setPasswordError('Incorrect password. Access denied.');
+      setPasswordError('Incorrect group name. Please enter the name of our group to open the admin panel.');
     }
     setIsSubmittingPassword(false);
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.warn('Firebase sign out error:', err);
-    }
+  const handleSignOut = () => {
     setIsAuthenticated(false);
     try {
       sessionStorage.removeItem('parijay_admin_auth');
@@ -650,14 +649,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
                     <Lock className="w-3 h-3" />
-                    Password Protected
+                    Group Access
                   </span>
                 )}
               </div>
               <p className={`text-[11px] sm:text-xs ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>
                 {isAuthenticated
                   ? 'Administrator Access · Hotel Management Portal'
-                  : 'Administrator Portal · Password Required'}
+                  : 'Administrator Portal · Group Name Required'}
               </p>
             </div>
           </div>
@@ -693,19 +692,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         </div>
 
         {/* ========================================================= */}
-        {/* SIMPLE PASSWORD LOGIN FORM (WHEN SIGNED OUT) */}
+        {/* SIMPLE GROUP NAME LOGIN FORM (WHEN SIGNED OUT) */}
         {/* ========================================================= */}
         {!isAuthenticated ? (
           <div className="p-6 sm:p-12 overflow-y-auto max-w-md mx-auto my-auto space-y-6 w-full">
             <div className="text-center space-y-2">
               <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/20 text-amber-500 flex items-center justify-center mx-auto shadow-sm">
-                <Lock className="w-7 h-7" />
+                <ShieldCheck className="w-7 h-7" />
               </div>
               <h4 className={`text-xl font-serif font-bold ${isNight ? 'text-white' : 'text-slate-950'}`}>
-                Administrator Sign In
+                Group Administrator Access
               </h4>
               <p className={`text-xs ${isNight ? 'text-slate-400' : 'text-slate-600'} leading-relaxed`}>
-                Enter the administrator password to access customer details, photo galleries, room pricing, and contact numbers.
+                Enter the name of our group to open the admin panel.
               </p>
             </div>
 
@@ -719,7 +718,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
                 <label className={`block text-xs font-semibold mb-1.5 ${isNight ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Admin Password
+                  Group Name
                 </label>
                 <div className="relative">
                   <Key className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
@@ -732,7 +731,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       setPasswordInput(e.target.value);
                       if (passwordError) setPasswordError(null);
                     }}
-                    placeholder="Enter password"
+                    placeholder="Enter group name (e.g. Parijay Group of Hotels)"
                     className={`w-full pl-9 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-colors ${
                       isNight ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
                     }`}
@@ -754,14 +753,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-105 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>Sign In to Admin Portal</span>
+                <span>Open Admin Panel</span>
               </button>
             </form>
 
             <div className={`p-3 rounded-xl border text-[11px] text-center ${
               isNight ? 'bg-slate-950/60 border-slate-800 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-500'
             }`}>
-              <p>Protected Management Portal · Parijay Group of Hotels</p>
+              <p>Management Portal · Parijay Group of Hotels</p>
             </div>
           </div>
         ) : (
