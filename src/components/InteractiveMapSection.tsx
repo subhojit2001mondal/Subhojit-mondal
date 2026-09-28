@@ -32,6 +32,8 @@ import {
   Star
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useContact } from '../context/ContactContext';
+import { useTouristSpots } from '../context/TouristSpotsContext';
 
 export interface Landmark {
   id: string;
@@ -189,8 +191,7 @@ const GANGTOK_MAP_DATA: PropertyMapData = {
       altitude: '12,310 ft',
       description: 'High-altitude sacred glacial lake reflecting Himalayan peaks and yak trails. Frozen in winter and surrounded by wildflowers in spring.',
       travelTip: 'Protected Area Permit required (handled by our in-house Travel Desk with Voter ID and 2 photos).',
-      googleMapQuery: 'Tsomgo+Lake+Sikkim',
-      imageUrl: '/images/destinations/tsomgo-lake.jpg'
+      googleMapQuery: 'Tsomgo+Lake+Sikkim'
     },
     {
       id: 'g-nathula',
@@ -460,6 +461,9 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
   selectedProperty = 'gangtok'
 }) => {
   const { isNight } = useTheme();
+  const { getCallLink } = useContact();
+  const { visibleSpots } = useTouristSpots();
+  const activeCallLink = getCallLink(selectedProperty);
 
   const data = selectedProperty === 'gangtok' ? GANGTOK_MAP_DATA : KALYANI_MAP_DATA;
   const isAmber = selectedProperty === 'gangtok';
@@ -498,10 +502,59 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
     setIsInfoWindowOpen(true);
   }, [selectedProperty]);
 
+  // Dynamic Gangtok landmarks generated from live visibleSpots
+  const gangtokDynamicLandmarks = useMemo(() => {
+    if (selectedProperty !== 'gangtok') return data.landmarks;
+
+    const baseLandmarks = GANGTOK_MAP_DATA.landmarks.map((l) => {
+      // Remove photo for Gangtok lakes (Tsomgo Lake, Gurudongmar, etc.) as requested
+      const isLake =
+        l.name.toLowerCase().includes('lake') ||
+        l.id.includes('tsomgo') ||
+        l.id.includes('gurudongmar');
+      return {
+        ...l,
+        imageUrl: isLake ? undefined : l.imageUrl
+      };
+    });
+
+    // If there are custom tourist spots added in admin panel that aren't in base landmarks, add them
+    const additionalSpots: Landmark[] = [];
+    visibleSpots.forEach((spot, idx) => {
+      const cleanName = spot.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchesBase = baseLandmarks.some((l) => {
+        const cleanLName = l.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return cleanLName.includes(cleanName) || cleanName.includes(cleanLName);
+      });
+      if (!matchesBase) {
+        const isLake = spot.name.toLowerCase().includes('lake');
+        additionalSpots.push({
+          id: spot.id,
+          name: spot.name,
+          distance: spot.distance || 'Excursion',
+          distanceKm: 8 + idx * 2,
+          walkTime: 'Excursion',
+          driveTime: 'Excursion',
+          category: 'sightseeing',
+          categoryLabel: 'Sightseeing Destination',
+          lat: 27.3389 + Math.sin(idx + 1) * 0.04,
+          lng: 88.6083 + Math.cos(idx + 1) * 0.04,
+          description: spot.description,
+          travelTip: 'Tour permits and vehicle assistance provided at hotel travel desk.',
+          googleMapQuery: encodeURIComponent(`${spot.name} Sikkim`),
+          imageUrl: isLake ? undefined : spot.photoUrl || undefined
+        });
+      }
+    });
+
+    return [...baseLandmarks, ...additionalSpots];
+  }, [selectedProperty, visibleSpots, data.landmarks]);
+
   // Combined landmark pool (curated + dynamically searched places)
   const allLandmarks = useMemo(() => {
-    return [...customPlaces, ...data.landmarks];
-  }, [customPlaces, data.landmarks]);
+    const propertyLandmarks = selectedProperty === 'gangtok' ? gangtokDynamicLandmarks : data.landmarks;
+    return [...customPlaces, ...propertyLandmarks];
+  }, [customPlaces, selectedProperty, gangtokDynamicLandmarks, data.landmarks]);
 
   // Filtered landmarks based on category and search query
   const filteredLandmarks = useMemo(() => {
@@ -520,8 +573,13 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
     });
   }, [allLandmarks, selectedCategory, searchQuery]);
 
-  const activeLandmark =
-    allLandmarks.find((l) => l.id === selectedLandmarkId) || allLandmarks[0];
+  const activeLandmark = useMemo(() => {
+    return (
+      allLandmarks.find((l) => l.id === selectedLandmarkId) ||
+      allLandmarks.find((l) => l.id === 'g-mgmarg') ||
+      allLandmarks[0]
+    );
+  }, [allLandmarks, selectedLandmarkId]);
 
   // Dynamic Google Maps Places API search handler
   const handlePerformPlacesSearch = async (e?: React.FormEvent) => {
@@ -1029,25 +1087,25 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
             {/* Active Destination Card */}
             {activeLandmark && (
               <div
-                className={`p-5 rounded-3xl border shadow-xl relative overflow-hidden transition-all duration-300 ${
-                  isNight ? 'bg-slate-900/90 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                className={`p-4 sm:p-5 rounded-3xl border shadow-2xl relative overflow-hidden transition-all duration-300 ${
+                  isNight ? 'bg-[#0b1322] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
                 }`}
               >
-                {/* Photo preview if available (e.g. for Yumthang, Tsomgo, Nathula) */}
+                {/* Photo preview if available (e.g. for MG Marg Promenade) - Lakes do not have photos */}
                 {activeLandmark.imageUrl && (
-                  <div className="relative h-36 w-full -mt-5 -mx-5 mb-4 overflow-hidden rounded-t-3xl">
+                  <div className="relative h-44 sm:h-52 w-full rounded-2xl overflow-hidden mb-4 shadow-lg">
                     <img
                       src={activeLandmark.imageUrl}
                       alt={activeLandmark.name}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
-                    <span className="absolute bottom-2.5 left-4 text-[11px] font-bold text-white px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs border border-white/20">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent pointer-events-none" />
+                    <span className="absolute bottom-3 left-3 text-[11px] sm:text-xs font-semibold text-white px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 shadow-md">
                       Scenic Photo Preview
                     </span>
                     {activeLandmark.altitude && (
-                      <span className="absolute bottom-2.5 right-4 text-[11px] font-mono font-bold text-amber-300 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs border border-white/20">
+                      <span className="absolute bottom-3 right-3 text-[11px] sm:text-xs font-mono font-bold text-amber-300 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 shadow-md">
                         {activeLandmark.altitude}
                       </span>
                     )}
@@ -1056,82 +1114,96 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
 
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
                       isAmber
-                        ? 'bg-amber-400/15 text-amber-400 border-amber-400/30'
-                        : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        ? 'bg-amber-400/10 text-amber-400 border-amber-400/50'
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/50'
                     }`}
                   >
                     {activeLandmark.categoryLabel}
                   </span>
 
-                  <span className="text-[11px] font-mono text-slate-400">
+                  <span className="text-xs text-slate-400 font-medium">
                     From {data.name}
                   </span>
                 </div>
 
-                <h3 className="text-xl sm:text-2xl font-serif font-bold leading-snug">
+                <h3 className={`text-xl sm:text-2xl font-serif font-bold leading-tight mb-3 ${isNight ? 'text-white' : 'text-slate-950'}`}>
                   {activeLandmark.name}
                 </h3>
 
                 {/* Transit Metric Badges */}
-                <div className="grid grid-cols-3 gap-2 mt-4">
+                <div className="grid grid-cols-3 gap-2.5 mb-3.5">
                   <div
-                    className={`p-2.5 rounded-2xl border text-center ${
-                      isNight ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center ${
+                      isNight ? 'bg-[#070d19] border-slate-800' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
-                    <MapPin className={`w-4 h-4 mx-auto mb-1 ${isAmber ? 'text-amber-400' : 'text-emerald-400'}`} />
-                    <span className="font-mono text-sm sm:text-base font-bold block">{activeLandmark.distance}</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Distance</span>
+                    <MapPin className={`w-4 h-4 mb-1 ${isAmber ? 'text-amber-400' : 'text-emerald-400'}`} />
+                    <span className={`font-mono text-sm sm:text-base font-bold block ${isNight ? 'text-white' : 'text-slate-900'}`}>
+                      {activeLandmark.distance}
+                    </span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mt-0.5">
+                      DISTANCE
+                    </span>
                   </div>
 
                   <div
-                    className={`p-2.5 rounded-2xl border text-center ${
-                      isNight ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center ${
+                      isNight ? 'bg-[#070d19] border-slate-800' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
-                    <Footprints className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-                    <span className="font-semibold text-xs block leading-tight mt-1">{activeLandmark.walkTime}</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block mt-0.5">Walking</span>
+                    <Footprints className="w-4 h-4 mb-1 text-slate-400" />
+                    <span className={`font-semibold text-xs sm:text-sm block leading-tight mt-0.5 ${isNight ? 'text-white' : 'text-slate-900'}`}>
+                      {activeLandmark.walkTime}
+                    </span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mt-0.5">
+                      WALKING
+                    </span>
                   </div>
 
                   <div
-                    className={`p-2.5 rounded-2xl border text-center ${
-                      isNight ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center ${
+                      isNight ? 'bg-[#070d19] border-slate-800' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
-                    <Car className={`w-4 h-4 mx-auto mb-1 ${isAmber ? 'text-amber-400' : 'text-emerald-400'}`} />
-                    <span className="font-semibold text-xs block leading-tight mt-1">{activeLandmark.driveTime}</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block mt-0.5">Drive / Cab</span>
+                    <Car className={`w-4 h-4 mb-1 ${isAmber ? 'text-amber-400' : 'text-emerald-400'}`} />
+                    <span className={`font-semibold text-xs sm:text-sm block leading-tight mt-0.5 ${isNight ? 'text-white' : 'text-slate-900'}`}>
+                      {activeLandmark.driveTime}
+                    </span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mt-0.5">
+                      DRIVE / CAB
+                    </span>
                   </div>
                 </div>
 
-                <p className={`text-xs mt-3 leading-relaxed ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>
+                <p className={`text-xs sm:text-sm leading-relaxed mb-3.5 ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>
                   {activeLandmark.description}
                 </p>
 
                 {/* Local Travel Tip */}
                 <div
-                  className={`mt-3.5 p-3 rounded-xl border flex items-start gap-2.5 text-xs ${
+                  className={`p-3.5 sm:p-4 rounded-xl border mb-4 ${
                     isAmber
-                      ? 'bg-amber-400/10 border-amber-400/30 text-amber-200'
-                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                      ? 'bg-amber-400/5 border-amber-400/30 text-amber-200'
+                      : 'bg-emerald-500/5 border-emerald-500/30 text-emerald-200'
                   }`}
                 >
-                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                  <div>
-                    <strong className="block text-[10px] uppercase tracking-wider opacity-90">
-                      Local Concierge Advice:
-                    </strong>
-                    <span className="opacity-95 leading-relaxed text-[11px]">
-                      {activeLandmark.travelTip}
-                    </span>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <div>
+                      <strong className="block text-[10px] uppercase tracking-wider text-amber-400">
+                        LOCAL CONCIERGE ADVICE:
+                      </strong>
+                      <span className="opacity-95 leading-relaxed text-xs block mt-0.5">
+                        {activeLandmark.travelTip}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Turn-by-Turn Navigation & Front Desk CTA */}
-                <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5">
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
                       data.address
@@ -1140,26 +1212,26 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-center flex items-center justify-center gap-2 shadow-lg transition-all ${
+                    className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-lg transition-all ${
                       isAmber
-                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-white'
+                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 shadow-amber-500/20 active:scale-[0.99]'
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/20 active:scale-[0.99]'
                     }`}
                   >
-                    <Navigation className="w-3.5 h-3.5" />
+                    <Navigation className="w-4 h-4" />
                     <span>Get Directions in Google Maps</span>
                   </a>
 
                   <a
-                    href="tel:+919163008361"
-                    className={`p-2.5 rounded-xl border flex items-center justify-center transition-colors shadow-xs ${
+                    href={activeCallLink}
+                    className={`p-3 rounded-xl border flex items-center justify-center transition-colors shadow-xs ${
                       isNight
-                        ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-white'
-                        : 'border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-900'
+                        ? 'border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-amber-400'
+                        : 'border-slate-300 bg-slate-100 hover:bg-slate-200 text-amber-600'
                     }`}
                     title="Call Reception / Travel Desk"
                   >
-                    <PhoneCall className="w-4 h-4 text-amber-400" />
+                    <PhoneCall className="w-4 h-4" />
                   </a>
                 </div>
               </div>
@@ -1168,15 +1240,15 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
             {/* Scrollable Destination List */}
             <div
               className={`rounded-2xl border p-4 space-y-2 text-xs ${
-                isNight ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+                isNight ? 'bg-[#0b1322]/90 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
               }`}
             >
               <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                <span>Select Any Destination to Map</span>
-                <span>{filteredLandmarks.length} Locations</span>
+                <span>SELECT ANY DESTINATION TO MAP</span>
+                <span>{filteredLandmarks.length} LOCATIONS</span>
               </div>
 
-              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                 {filteredLandmarks.map((item) => {
                   const isItemActive = item.id === activeLandmark?.id;
 
@@ -1191,26 +1263,26 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                       className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer ${
                         isItemActive
                           ? isAmber
-                            ? 'bg-amber-400/20 text-white border border-amber-400/40 font-semibold'
-                            : 'bg-emerald-500/20 text-white border border-emerald-500/40 font-semibold'
+                            ? 'bg-amber-400/10 text-white border border-amber-400/60 font-semibold shadow-xs'
+                            : 'bg-emerald-500/10 text-white border border-emerald-500/60 font-semibold shadow-xs'
                           : isNight
-                          ? 'hover:bg-slate-800 text-slate-300'
-                          : 'hover:bg-slate-100 text-slate-700'
+                          ? 'hover:bg-slate-800/60 text-slate-300 border border-transparent'
+                          : 'hover:bg-slate-100 text-slate-700 border border-transparent'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <span
-                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                          className={`w-2 h-2 rounded-full shrink-0 ${
                             isItemActive
                               ? isAmber
                                 ? 'bg-amber-400 ring-2 ring-amber-300/40'
                                 : 'bg-emerald-400 ring-2 ring-emerald-300/40'
-                              : 'bg-slate-500'
+                              : 'bg-slate-600'
                           }`}
                         />
                         <div className="truncate">
                           <span className="block truncate font-medium">{item.name}</span>
-                          <span className="block text-[10px] text-slate-400 leading-none">
+                          <span className="block text-[10px] text-slate-400 leading-none mt-0.5">
                             {item.categoryLabel}
                           </span>
                         </div>
@@ -1230,7 +1302,7 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                         >
                           {item.distance}
                         </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                        <ChevronRight className={`w-3.5 h-3.5 ${isItemActive ? (isAmber ? 'text-amber-400' : 'text-emerald-400') : 'text-slate-500'}`} />
                       </div>
                     </button>
                   );

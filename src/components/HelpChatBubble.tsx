@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MessageCircle, X, ChevronRight, Phone, Mountain, Building } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { PROPERTIES } from '../data/hotels';
+import { useContact } from '../context/ContactContext';
 
 interface HelpChatBubbleProps {
   selectedProperty?: 'gangtok' | 'kalyani';
@@ -14,6 +15,13 @@ export const HelpChatBubble: React.FC<HelpChatBubbleProps> = ({
   const { isNight } = useTheme();
   const isGangtok = selectedProperty === 'gangtok';
   const property = PROPERTIES[selectedProperty];
+  const { getPrimaryPhone, getCallLink, getWhatsAppLink } = useContact();
+  const activePhone = getPrimaryPhone(selectedProperty);
+  const activeCallLink = getCallLink(selectedProperty);
+  const activeWhatsAppLink = getWhatsAppLink(
+    selectedProperty,
+    `Hello ${property.name}, I need assistance with my stay.`
+  );
 
   return (
     <div className="fixed bottom-24 md:bottom-6 right-3 sm:right-6 z-40">
@@ -55,7 +63,7 @@ export const HelpChatBubble: React.FC<HelpChatBubbleProps> = ({
 
           <div className="mt-4 space-y-2 text-xs">
             <a
-              href={`https://wa.me/${property.whatsapp.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(property.name)},%20I%20need%20assistance%20with%20my%20stay.`}
+              href={activeWhatsAppLink}
               target="_blank"
               rel="noreferrer"
               className={`w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-colors block ${
@@ -72,7 +80,7 @@ export const HelpChatBubble: React.FC<HelpChatBubbleProps> = ({
             </a>
 
             <a
-              href={`tel:${property.phone}`}
+              href={activeCallLink}
               className={`w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-colors block ${
                 isNight
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-200'
@@ -81,7 +89,7 @@ export const HelpChatBubble: React.FC<HelpChatBubbleProps> = ({
             >
               <div className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-amber-500" />
-                <span>Call Desk: {property.phone}</span>
+                <span>Call Desk: {activePhone}</span>
               </div>
               <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
             </a>

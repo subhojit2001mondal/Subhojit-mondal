@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase App
@@ -13,5 +14,8 @@ export const db = firebaseConfig.firestoreDatabaseId
 
 // Initialize Cloud Storage
 export const storage = getStorage(app);
+
+// Initialize Firebase Authentication
+export const auth = getAuth(app);
 
 export default app;

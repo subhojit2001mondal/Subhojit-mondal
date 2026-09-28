@@ -15,20 +15,19 @@ import { PROPERTIES } from '../data/hotels';
 import { useTheme } from '../context/ThemeContext';
 import { saveCustomerInquiryToDb } from '../services/dbService';
 import { ParijaiLogo } from './ParijaiLogo';
+import { useContact } from '../context/ContactContext';
 
 interface FooterProps {
   selectedProperty?: 'gangtok' | 'kalyani';
   onBookNow: () => void;
   onSelectProperty?: (prop: 'gangtok' | 'kalyani') => void;
-  onOpenDatabaseRecords?: () => void;
-  onOpenManagePhotos?: () => void;
+  onOpenAdminPanel?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   selectedProperty = 'gangtok',
   onBookNow,
-  onOpenDatabaseRecords,
-  onOpenManagePhotos
+  onOpenAdminPanel
 }) => {
   const isGangtok = selectedProperty === 'gangtok';
   const property = PROPERTIES[selectedProperty];
@@ -36,6 +35,14 @@ export const Footer: React.FC<FooterProps> = ({
   const [subscribed, setSubscribed] = useState(false);
   const [showTariffModal, setShowTariffModal] = useState(false);
   const { isNight } = useTheme();
+
+  const { getPrimaryPhone, getCallLink, getWhatsAppLink } = useContact();
+  const activePhone = getPrimaryPhone(selectedProperty);
+  const activeCallLink = getCallLink(selectedProperty);
+  const activeWhatsAppLink = getWhatsAppLink(
+    selectedProperty,
+    `Hello ${property.name}, I would like to inquire about room availability.`
+  );
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,11 +102,11 @@ export const Footer: React.FC<FooterProps> = ({
 
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-800/80 pt-4">
                 <a
-                  href={`tel:${property.phone}`}
+                  href={activeCallLink}
                   className="flex items-center gap-2 text-slate-200 hover:text-amber-300 transition-colors"
                 >
                   <Phone className={`w-3.5 h-3.5 ${isGangtok ? 'text-amber-400' : 'text-emerald-400'}`} />
-                  <span>Reception & Desk: {property.phone}</span>
+                  <span>Reception & Desk: {activePhone}</span>
                 </a>
                 <a
                   href={`mailto:${property.email}`}
@@ -123,7 +130,7 @@ export const Footer: React.FC<FooterProps> = ({
                 </a>
 
                 <a
-                  href={`https://wa.me/${property.whatsapp.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(property.name)},%20I%20would%20like%20to%20inquire%20about%20room%20availability.`}
+                  href={activeWhatsAppLink}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3.5 py-2 rounded-lg bg-emerald-500/15 text-xs text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30 flex items-center gap-1.5 transition-colors"
@@ -205,28 +212,6 @@ export const Footer: React.FC<FooterProps> = ({
                     Guest Testimonials
                   </a>
                 </li>
-                {onOpenDatabaseRecords && (
-                  <li>
-                    <button
-                      onClick={onOpenDatabaseRecords}
-                      className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer flex items-center gap-1"
-                    >
-                      <span>Cloud Database & Records</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300">Live</span>
-                    </button>
-                  </li>
-                )}
-                {onOpenManagePhotos && (
-                  <li>
-                    <button
-                      onClick={onOpenManagePhotos}
-                      className="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer flex items-center gap-1"
-                    >
-                      <span>Manage Photos (Owner)</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-300">Admin</span>
-                    </button>
-                  </li>
-                )}
               </ul>
             </div>
 
@@ -296,12 +281,25 @@ export const Footer: React.FC<FooterProps> = ({
 
           <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4 pb-16 md:pb-0">
             <div>© {new Date().getFullYear()} Parijay Group of Hotels. All rights reserved.</div>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <span>Privacy Policy</span>
               <span>·</span>
               <span>Terms of Stay</span>
               <span>·</span>
               <span>FSSAI Certified In-House Kitchen</span>
+              {onOpenAdminPanel && (
+                <>
+                  <span>·</span>
+                  <button
+                    type="button"
+                    onClick={onOpenAdminPanel}
+                    className="hover:text-amber-400 text-slate-400 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Admin Panel</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

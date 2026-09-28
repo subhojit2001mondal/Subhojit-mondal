@@ -656,7 +656,7 @@ export const PropertyShowcase: React.FC<PropertyShowcaseProps> = ({
 interface BuildingExteriorShowcaseProps {
   photos: GalleryPhoto[];
   propertyName: string;
-  onOpenManagePhotos: () => void;
+  onOpenManagePhotos?: () => void;
   onOpenLightbox: (photo: GalleryPhoto, allPhotos: GalleryPhoto[]) => void;
   isNight: boolean;
   isGangtok: boolean;
@@ -690,22 +690,24 @@ const BuildingExteriorShowcase: React.FC<BuildingExteriorShowcaseProps> = ({
               {propertyName} — Building Front & Exterior
             </h4>
             <p className="text-xs text-slate-400 mt-1 max-w-lg">
-              No exterior photos uploaded yet for this property. Upload photos via the Admin Panel to display the building entrance, facade, and surroundings here.
+              No exterior photos uploaded yet for this property. High-resolution photos can be uploaded in the administrator portal.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={onOpenManagePhotos}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer self-start sm:self-auto ${
-            isGangtok
-              ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
-              : 'bg-emerald-500 hover:bg-emerald-400 text-white'
-          }`}
-        >
-          <Camera className="w-3.5 h-3.5" />
-          <span>Upload Exterior Photos</span>
-        </button>
+        {onOpenManagePhotos && (
+          <button
+            onClick={onOpenManagePhotos}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer self-start sm:self-auto ${
+              isGangtok
+                ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-white'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>Upload Exterior Photos</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -733,16 +735,18 @@ const BuildingExteriorShowcase: React.FC<BuildingExteriorShowcaseProps> = ({
           </span>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenManagePhotos();
-          }}
-          title="Manage exterior photos in Admin Panel"
-          className="absolute top-3.5 right-4 p-2 rounded-xl bg-black/70 hover:bg-amber-400 hover:text-slate-950 text-white border border-white/20 transition-all opacity-80 group-hover:opacity-100 cursor-pointer shadow-lg"
-        >
-          <Camera className="w-4 h-4" />
-        </button>
+        {onOpenManagePhotos && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenManagePhotos();
+            }}
+            title="Manage exterior photos in Admin Panel"
+            className="absolute top-3.5 right-4 p-2 rounded-xl bg-black/70 hover:bg-amber-400 hover:text-slate-950 text-white border border-white/20 transition-all opacity-80 group-hover:opacity-100 cursor-pointer shadow-lg"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+        )}
 
         <div className="absolute bottom-4 left-4 right-4 text-white">
           <div className="font-serif font-bold text-base sm:text-lg drop-shadow line-clamp-1">
@@ -814,7 +818,7 @@ interface RoomCardProps {
   isNight: boolean;
   isGangtok: boolean;
   onReserve: () => void;
-  onOpenManagePhotos: () => void;
+  onOpenManagePhotos?: () => void;
   onOpenLightbox: (photo: GalleryPhoto, allPhotos: GalleryPhoto[]) => void;
 }
 
@@ -1008,7 +1012,7 @@ interface RoomImageGalleryProps {
   galleryId: GalleryId;
   roomName: string;
   photos: GalleryPhoto[];
-  onOpenManagePhotos: () => void;
+  onOpenManagePhotos?: () => void;
   onOpenLightbox: (photo: GalleryPhoto, allPhotos: GalleryPhoto[]) => void;
   isNight: boolean;
 }
@@ -1037,15 +1041,17 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
           No photo uploaded for {roomName}
         </span>
         <span className="text-[10px] text-slate-400 mt-0.5 max-w-xs">
-          Upload room photos in the Admin Panel to display them here.
+          High-definition photography verified by Parijay Group.
         </span>
-        <button
-          onClick={onOpenManagePhotos}
-          className="mt-3 px-3 py-1 rounded-lg bg-amber-400/90 hover:bg-amber-400 text-slate-950 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
-        >
-          <Camera className="w-3 h-3" />
-          <span>Upload Room Photos</span>
-        </button>
+        {onOpenManagePhotos && (
+          <button
+            onClick={onOpenManagePhotos}
+            className="mt-3 px-3 py-1 rounded-lg bg-amber-400/90 hover:bg-amber-400 text-slate-950 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+          >
+            <Camera className="w-3 h-3" />
+            <span>Upload Room Photos</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -1081,17 +1087,19 @@ const RoomImageGallery: React.FC<RoomImageGalleryProps> = ({
         </span>
       </div>
 
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenManagePhotos();
-        }}
-        title="Manage photos for this room in Admin Panel"
-        className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-black/70 hover:bg-amber-400 hover:text-slate-950 text-white border border-white/20 transition-all opacity-80 group-hover/gallery:opacity-100 cursor-pointer shadow-md"
-      >
-        <Camera className="w-3.5 h-3.5" />
-      </button>
+      {onOpenManagePhotos && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenManagePhotos();
+          }}
+          title="Manage photos for this room in Admin Panel"
+          className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-black/70 hover:bg-amber-400 hover:text-slate-950 text-white border border-white/20 transition-all opacity-80 group-hover/gallery:opacity-100 cursor-pointer shadow-md"
+        >
+          <Camera className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {photos.length > 1 && (
         <>
@@ -1139,7 +1147,7 @@ interface CommonSpaceCardProps {
   highlights: string[];
   photos: GalleryPhoto[];
   isNight: boolean;
-  onOpenManagePhotos: () => void;
+  onOpenManagePhotos?: () => void;
   onOpenLightbox: (photo: GalleryPhoto, allPhotos: GalleryPhoto[]) => void;
 }
 
@@ -1209,12 +1217,14 @@ const CommonSpaceCard: React.FC<CommonSpaceCardProps> = ({
           <span>Complimentary access for all resident guests</span>
         </div>
 
-        <button
-          onClick={onOpenManagePhotos}
-          className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2 cursor-pointer"
-        >
-          Manage photos
-        </button>
+        {onOpenManagePhotos && (
+          <button
+            onClick={onOpenManagePhotos}
+            className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2 cursor-pointer"
+          >
+            Manage photos
+          </button>
+        )}
       </div>
     </div>
   );

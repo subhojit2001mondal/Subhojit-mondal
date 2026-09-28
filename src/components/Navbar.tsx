@@ -31,35 +31,42 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { ParijaiLogo } from './ParijaiLogo';
+import { useContact } from '../context/ContactContext';
 
 interface NavbarProps {
   selectedProperty?: 'gangtok' | 'kalyani';
   onBookClick: () => void;
   onSelectProperty: (propertyId: 'gangtok' | 'kalyani') => void;
-  onOpenDatabaseRecords?: () => void;
-  onOpenManagePhotos?: () => void;
+  onOpenAdminPanel?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   selectedProperty = 'gangtok',
   onBookClick,
   onSelectProperty,
-  onOpenDatabaseRecords,
-  onOpenManagePhotos
+  onOpenAdminPanel
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [propertiesDropdownOpen, setPropertiesDropdownOpen] = useState(false);
-  const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
   const [showPhoneCard, setShowPhoneCard] = useState(false);
   const [phoneCopied, setPhoneCopied] = useState(false);
 
   const phoneCardRef = useRef<HTMLDivElement>(null);
   const propertiesDropdownRef = useRef<HTMLDivElement>(null);
-  const adminDropdownRef = useRef<HTMLDivElement>(null);
   const menuDropdownRef = useRef<HTMLDivElement>(null);
 
   const { isNight, toggleTheme } = useTheme();
+  const { getPrimaryPhone, getCallLink, getWhatsAppLink } = useContact();
+
+  const activePhone = getPrimaryPhone(selectedProperty);
+  const activeCallLink = getCallLink(selectedProperty);
+  const activeWhatsAppLink = getWhatsAppLink(
+    selectedProperty,
+    `Hello Parijay Group of Hotels, I would like to inquire about room availability at ${
+      selectedProperty === 'gangtok' ? 'Trikuta Residency (Gangtok)' : 'Hotel Parijaye (AIIMS Kalyani)'
+    }.`
+  );
 
   // Scroll detection for glassy transition
   useEffect(() => {
@@ -80,9 +87,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       if (propertiesDropdownRef.current && !propertiesDropdownRef.current.contains(target)) {
         setPropertiesDropdownOpen(false);
       }
-      if (adminDropdownRef.current && !adminDropdownRef.current.contains(target)) {
-        setAdminDropdownOpen(false);
-      }
       if (menuDropdownRef.current && !menuDropdownRef.current.contains(target)) {
         setMobileMenuOpen(false);
       }
@@ -98,18 +102,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         window.innerWidth < 768);
 
     if (isMobile) {
-      window.location.href = 'tel:+919163008361';
+      window.location.href = activeCallLink;
     } else {
       e.stopPropagation();
       setShowPhoneCard((prev) => !prev);
       setPropertiesDropdownOpen(false);
-      setAdminDropdownOpen(false);
     }
   };
 
   const handleCopyPhone = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText('+91 91630 08361');
+    navigator.clipboard.writeText(activePhone);
     setPhoneCopied(true);
     setTimeout(() => setPhoneCopied(false), 2200);
   };
@@ -196,76 +199,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* RIGHT UTILITY & ACTIONS BAR (Responsive, no overlap with scrollbar) */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              {/* Admin Menu Icon Button (Hidden on tablet/mobile to save space; accessible in mobile drawer) */}
-              {(onOpenDatabaseRecords || onOpenManagePhotos) && (
-                <div className="relative hidden xl:block" ref={adminDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdminDropdownOpen((prev) => !prev);
-                      setPropertiesDropdownOpen(false);
-                      setShowPhoneCard(false);
-                    }}
-                    aria-label="Owner & Admin Controls"
-                    title="Owner & Admin Controls (Database & Photos)"
-                    className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full flex items-center justify-center transition-all cursor-pointer border ${
-                      adminDropdownOpen
-                        ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md ring-2 ring-amber-400/30'
-                        : 'bg-black/30 hover:bg-black/50 text-white border-white/20'
-                    }`}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
-                  </button>
-
-                  {adminDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-64 p-2 rounded-2xl border border-slate-700/80 bg-slate-950/95 text-white shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                      <div className="px-3 py-2 border-b border-slate-800 text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Owner & Admin Hub</span>
-                      </div>
-
-                      <div className="p-1 space-y-1 mt-1">
-                        {onOpenManagePhotos && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onOpenManagePhotos();
-                              setAdminDropdownOpen(false);
-                            }}
-                            className="w-full p-2.5 rounded-xl text-left transition-colors flex items-center gap-2.5 cursor-pointer normal-case hover:bg-slate-800"
-                          >
-                            <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-                              <Camera className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-white">Manage Photos (Cloud)</div>
-                              <div className="text-[10px] text-slate-400">Passcode-protected owner upload</div>
-                            </div>
-                          </button>
-                        )}
-
-                        {onOpenDatabaseRecords && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onOpenDatabaseRecords();
-                              setAdminDropdownOpen(false);
-                            }}
-                            className="w-full p-2.5 rounded-xl text-left transition-colors flex items-center gap-2.5 cursor-pointer normal-case hover:bg-slate-800"
-                          >
-                            <div className="w-7 h-7 rounded-lg bg-amber-400/15 text-amber-400 flex items-center justify-center shrink-0">
-                              <Database className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-white">Database Records</div>
-                              <div className="text-[10px] text-slate-400">Bookings, leads & photo index</div>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+              {/* Single Reorganized Admin Button (Hidden on tablet/mobile to save space; accessible in mobile drawer) */}
+              {onOpenAdminPanel && (
+                <button
+                  type="button"
+                  onClick={onOpenAdminPanel}
+                  aria-label="Owner & Administrator Portal"
+                  title="Owner & Administrator Portal (Protected)"
+                  className="hidden xl:flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full items-center justify-center transition-all cursor-pointer border bg-black/30 hover:bg-black/50 text-white border-white/20 hover:border-amber-400/40 shadow-xs"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+                </button>
               )}
 
               {/* Day / Night Mood Toggle - Desktop and Tablet view (Hidden on mobile per user instruction) */}
@@ -281,11 +225,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* WhatsApp Action (Hidden on mobile & small tablets to preserve space) */}
               <a
-                href="https://wa.me/919163008361?text=Hello%20Parijay%20Group%20of%20Hotels,%20I%20would%20like%20to%20inquire%20about%20room%20availability."
+                href={activeWhatsAppLink}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Direct WhatsApp Inquiry"
-                title="Direct WhatsApp Inquiry (+91 91630 08361)"
+                aria-label={`Direct WhatsApp Inquiry (${activePhone})`}
+                title={`Direct WhatsApp Inquiry (${activePhone})`}
                 className="hidden lg:inline-flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full transition-all border bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
@@ -295,8 +239,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="relative hidden md:block" ref={phoneCardRef}>
                 <button
                   onClick={handleCallIconClick}
-                  aria-label="Call Hotel Desk (+91 91630 08361)"
-                  title="Call Hotel Desk (+91 91630 08361)"
+                  aria-label={`Call Hotel Desk (${activePhone})`}
+                  title={`Call Hotel Desk (${activePhone})`}
                   className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full flex items-center justify-center transition-all cursor-pointer border ${
                     showPhoneCard
                       ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md ring-2 ring-amber-400/30'
@@ -328,13 +272,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="mt-3">
                       <div className="text-[11px] text-slate-400">Direct Helpline & Reservations</div>
                       <div className="text-lg font-bold font-mono tracking-tight mt-0.5 text-amber-400">
-                        +91 91630 08361
+                        {activePhone}
                       </div>
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <a
-                        href="tel:+919163008361"
+                        href={activeCallLink}
                         className="py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
                       >
                         <Phone className="w-3.5 h-3.5" />
@@ -366,7 +310,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="mt-2.5 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px]">
                       <span className="text-slate-400">Gangtok & Kalyani</span>
                       <a
-                        href="https://wa.me/919163008361?text=Hello%20Parijay%20Group%20of%20Hotels,%20I%20would%20like%20to%20inquire%20about%20room%20availability."
+                        href={activeWhatsAppLink}
                         target="_blank"
                         rel="noreferrer"
                         className="text-emerald-400 hover:underline flex items-center gap-1"
@@ -396,7 +340,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => {
                     setMobileMenuOpen(!mobileMenuOpen);
                     setPropertiesDropdownOpen(false);
-                    setAdminDropdownOpen(false);
                     setShowPhoneCard(false);
                   }}
                   aria-label="Toggle navigation menu"
@@ -632,7 +575,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </a>
 
                         <a
-                          href="https://wa.me/919163008361?text=Hello%20Parijay%20Group%20of%20Hotels,%20I%20would%20like%20to%20inquire%20about%20room%20availability."
+                          href={activeWhatsAppLink}
                           target="_blank"
                           rel="noreferrer"
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-emerald-300 hover:text-emerald-200 hover:bg-white/10 transition-colors"
@@ -642,38 +585,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </a>
 
                         <a
-                          href="tel:+919163008361"
+                          href={activeCallLink}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
                         >
                           <PhoneCall className="w-4 h-4 text-amber-400" />
-                          <span>Call Reception (+91 91630 08361)</span>
+                          <span>Call Reception ({activePhone})</span>
                         </a>
 
-                        {onOpenManagePhotos && (
+                        {onOpenAdminPanel && (
                           <button
                             type="button"
                             onClick={() => {
-                              onOpenManagePhotos();
+                              onOpenAdminPanel();
                               setMobileMenuOpen(false);
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-white/10 transition-colors text-slate-200 hover:text-white cursor-pointer"
                           >
-                            <Camera className="w-4 h-4 text-emerald-400" />
-                            <span>Parijay Photo Manager</span>
-                          </button>
-                        )}
-
-                        {onOpenDatabaseRecords && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onOpenDatabaseRecords();
-                              setMobileMenuOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-white/10 transition-colors text-slate-200 hover:text-white cursor-pointer"
-                          >
-                            <Database className="w-4 h-4 text-amber-400" />
-                            <span>Database Records & Leads</span>
+                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                            <span>Administrator Portal</span>
                           </button>
                         )}
                       </div>

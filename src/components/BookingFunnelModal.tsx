@@ -19,6 +19,8 @@ import {
 import { Room, ADD_ONS, BookingAddOn, PROPERTIES, BookingConfirmationSummary } from '../data/hotels';
 import { useTheme } from '../context/ThemeContext';
 import { saveBookingToDb, GalleryId, GalleryPhoto } from '../services/dbService';
+import { useContact } from '../context/ContactContext';
+import { useTouristSpots } from '../context/TouristSpotsContext';
 
 interface BookingFunnelModalProps {
   room: Room | null;
@@ -46,10 +48,14 @@ export const BookingFunnelModal: React.FC<BookingFunnelModalProps> = ({
   onSuccess
 }) => {
   const { isNight } = useTheme();
+  const { getPrimaryPhone, getPrimaryWhatsApp, getWhatsAppLink } = useContact();
+  const { visibleSpots } = useTouristSpots();
 
   if (!room) return null;
 
   const property = PROPERTIES[room.propertyId];
+  const dynamicPhone = getPrimaryPhone(room.propertyId);
+  const dynamicWhatsapp = getPrimaryWhatsApp(room.propertyId);
   const propertyAddOns = ADD_ONS.filter((a) => a.propertyId === room.propertyId);
 
   // Dynamic nightly rate
@@ -179,8 +185,8 @@ export const BookingFunnelModal: React.FC<BookingFunnelModalProps> = ({
         propertyId: room.propertyId,
         propertyName: property.name,
         propertyLocation: property.location,
-        propertyPhone: property.phone,
-        propertyWhatsapp: property.whatsapp,
+        propertyPhone: dynamicPhone,
+        propertyWhatsapp: dynamicWhatsapp,
         roomId: room.id,
         roomName: room.name,
         guestName,
@@ -220,7 +226,7 @@ export const BookingFunnelModal: React.FC<BookingFunnelModalProps> = ({
 
   const generateWhatsAppConfirmationMessage = () => {
     const message = `Namaste Parijay Group of Hotels! I have reserved ${room.name} at ${property.name}.\nBooking Ref: ${bookingRefNumber}\nDates: ${checkInDate} to ${checkOutDate} (${nights} nights)\nGuest: ${guestName} (${guestPhone})\nTotal Tariff: ₹${grandTotal.toLocaleString('en-IN')}\nSpecial Request: ${specialNeeds || 'Standard Check-in'}`;
-    return `https://wa.me/${property.whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+    return getWhatsAppLink(room.propertyId, message);
   };
 
   return (
@@ -468,9 +474,34 @@ export const BookingFunnelModal: React.FC<BookingFunnelModalProps> = ({
                           <div className={`text-sm font-semibold ${isNight ? 'text-white' : 'text-slate-950'}`}>
                             {addon.name}
                           </div>
-                          <div className={`text-xs mt-0.5 ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {addon.description}
-                          </div>
+                          {addon.id === 'add-g-tour' && visibleSpots.length > 0 ? (
+                            <div className="space-y-1.5 mt-0.5">
+                              <div className={`text-xs ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>
+                                Full-day scenic excursion & permits for our curated spots:
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {visibleSpots.slice(0, 5).map((s) => (
+                                  <span
+                                    key={s.id}
+                                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium border ${
+                                      isNight ? 'bg-slate-900 border-slate-700 text-amber-300' : 'bg-white border-slate-300 text-amber-800'
+                                    }`}
+                                  >
+                                    {s.name}
+                                  </span>
+                                ))}
+                                {visibleSpots.length > 5 && (
+                                  <span className="text-[10px] text-slate-500 self-center">
+                                    +{visibleSpots.length - 5} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={`text-xs mt-0.5 ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>
+                              {addon.description}
+                            </div>
+                          )}
                           {addon.recommendedFor === purpose && (
                             <span className="inline-block mt-1 text-[10px] text-amber-500 font-semibold">
                               ★ Recommended for your visit

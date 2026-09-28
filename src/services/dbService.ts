@@ -245,11 +245,228 @@ export interface RoomPriceRecord {
   updatedTimestamp: number;
 }
 
+export interface ContactNumber {
+  id: string;
+  label: string;
+  phoneNumber: string;
+  property: 'gangtok' | 'kalyani' | 'both';
+  purpose: 'call' | 'whatsapp' | 'both';
+  isPrimary: boolean;
+  updatedAt?: string;
+  updatedTimestamp?: number;
+}
+
+export const DEFAULT_CONTACT_NUMBERS: ContactNumber[] = [
+  {
+    id: 'contact-trikuta-reception',
+    label: 'Trikuta Residency Reception (Gangtok)',
+    phoneNumber: '+91 91630 08361',
+    property: 'gangtok',
+    purpose: 'both',
+    isPrimary: true,
+    updatedAt: new Date().toISOString(),
+    updatedTimestamp: 1700000000000
+  },
+  {
+    id: 'contact-parijaye-frontdesk',
+    label: 'Hotel Parijaye Front Desk (AIIMS Kalyani)',
+    phoneNumber: '+91 91630 08361',
+    property: 'kalyani',
+    purpose: 'both',
+    isPrimary: true,
+    updatedAt: new Date().toISOString(),
+    updatedTimestamp: 1700000000001
+  },
+  {
+    id: 'contact-central-helpline',
+    label: 'Parijay Group 24/7 Central Helpline & Reservations',
+    phoneNumber: '+91 91630 08361',
+    property: 'both',
+    purpose: 'both',
+    isPrimary: false,
+    updatedAt: new Date().toISOString(),
+    updatedTimestamp: 1700000000002
+  }
+];
+
+export function formatTelLink(phone: string): string {
+  const cleaned = phone.replace(/[^0-9+]/g, '');
+  if (!cleaned.startsWith('+')) {
+    if (cleaned.length === 10) return `tel:+91${cleaned}`;
+  }
+  return `tel:${cleaned}`;
+}
+
+export function formatWhatsAppLink(phone: string, textPrompt?: string): string {
+  let cleaned = phone.replace(/[^0-9]/g, '');
+  if (cleaned.length === 10) {
+    cleaned = '91' + cleaned;
+  }
+  const baseUrl = `https://wa.me/${cleaned}`;
+  return textPrompt ? `${baseUrl}?text=${encodeURIComponent(textPrompt)}` : baseUrl;
+}
+
+export function getPrimaryContact(
+  contacts: ContactNumber[],
+  property: 'gangtok' | 'kalyani',
+  purpose: 'call' | 'whatsapp' = 'call'
+): ContactNumber {
+  const matching = contacts.find(
+    (c) =>
+      (c.property === property || c.property === 'both') &&
+      (c.purpose === purpose || c.purpose === 'both') &&
+      c.isPrimary
+  );
+  if (matching) return matching;
+
+  const anyForProp = contacts.find(
+    (c) =>
+      (c.property === property || c.property === 'both') &&
+      (c.purpose === purpose || c.purpose === 'both')
+  );
+  if (anyForProp) return anyForProp;
+
+  const anyPrimary = contacts.find((c) => c.isPrimary);
+  if (anyPrimary) return anyPrimary;
+
+  return contacts[0] || DEFAULT_CONTACT_NUMBERS[0];
+}
+
+// -------------------------------------------------------------
+// EDITABLE TOURIST SPOTS REPOSITORY & INTERFACE
+// -------------------------------------------------------------
+export interface TouristSpot {
+  id: string;
+  name: string;
+  description: string;
+  photoUrl?: string;
+  distance?: string; // Optional distance or travel time from Gangtok
+  isVisible: boolean; // Hide/show toggle
+  order: number; // Order index for site display
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const DEFAULT_TOURIST_SPOTS: TouristSpot[] = [
+  {
+    id: 'spot-gurudongmar',
+    name: 'Gurudongmar Lake',
+    description: 'Sacred turquoise glacial waters at 17,800 ft under snow-capped peaks, part of guided North Sikkim journeys.',
+    photoUrl: '',
+    distance: '17,800 ft · North Sikkim 2N/3D Circuit',
+    isVisible: true,
+    order: 1
+  },
+  {
+    id: 'spot-yumthang',
+    name: 'Yumthang Valley (Valley of Flowers)',
+    description: 'Celebrated Valley of Flowers featuring blooming rhododendrons, alpine river meadows, and hot springs.',
+    photoUrl: '/images/destinations/yumthang-valley.jpg',
+    distance: '140 km · North Sikkim Tour',
+    isVisible: true,
+    order: 2
+  },
+  {
+    id: 'spot-tsomgo',
+    name: 'Tsomgo (Changu) Lake',
+    description: 'Sacred high-altitude glacial lake reflecting Himalayan peaks and yak trails, an easy excursion from Gangtok.',
+    photoUrl: '',
+    distance: '38 km · 1.5 hrs 4x4 cab',
+    isVisible: true,
+    order: 3
+  },
+  {
+    id: 'spot-nathula',
+    name: 'Nathula Pass Indo-China Border',
+    description: 'Legendary high-altitude mountain frontier winding through Himalayan snows along the historic Old Silk Route.',
+    photoUrl: '/images/destinations/nathula-pass.jpg',
+    distance: '56 km · 2.5 hrs 4x4 cab',
+    isVisible: true,
+    order: 4
+  },
+  {
+    id: 'spot-babamandir',
+    name: 'Baba Harbhajan Singh Mandir',
+    description: 'Revered mountain frontier shrine dedicated to soldier-saint Baba Harbhajan Singh, draped in prayer flags.',
+    photoUrl: 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1920&h=1080&q=85',
+    distance: '52 km · 2.2 hrs 4x4 cab',
+    isVisible: true,
+    order: 5
+  },
+  {
+    id: 'spot-mgmarg',
+    name: 'MG Marg Mall Promenade',
+    description: 'Vehicle-free pedestrian promenade with European-style mountain cafes, Sikkimese craft stores, and charm.',
+    photoUrl: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&w=1920&h=1080&q=85',
+    distance: '1.2 km · 7 mins walk or cab',
+    isVisible: true,
+    order: 6
+  },
+  {
+    id: 'spot-ropeway',
+    name: 'Gangtok Cable Car (Ropeway)',
+    description: 'Zig-zag cable car connecting Deorali Bazar with Tashiling Secretariat over forested pine gorges and valleys.',
+    photoUrl: '',
+    distance: '2.4 km · 10 mins',
+    isVisible: true,
+    order: 7
+  },
+  {
+    id: 'spot-rumtek',
+    name: 'Rumtek Dharma Chakra Centre',
+    description: 'One of the grandest Buddhist monasteries in Sikkim, featuring golden stupas, intricate murals, and sacred relics.',
+    photoUrl: '',
+    distance: '24 km · 50 mins cab',
+    isVisible: true,
+    order: 8
+  },
+  {
+    id: 'spot-enchey',
+    name: 'Enchey Monastery',
+    description: 'Historic 200-year-old Nyingma monastery blessed by Lama Druptob Karpo with panoramic Kanchenjunga backdrop.',
+    photoUrl: '',
+    distance: '1.6 km · 15 mins walk',
+    isVisible: true,
+    order: 9
+  },
+  {
+    id: 'spot-banjhakri',
+    name: 'Banjhakri Falls & Energy Park',
+    description: '100-foot natural cascading waterfall nestled within manicured sub-tropical gardens and traditional sculptures.',
+    photoUrl: '',
+    distance: '6.2 km · 18 mins cab',
+    isVisible: true,
+    order: 10
+  },
+  {
+    id: 'spot-ganeshtok',
+    name: 'Ganesh Tok & Hanuman Tok',
+    description: 'Hilltop circular viewpoint shrines with telescope pavilions offering unobstructed vistas of Mount Kanchenjunga.',
+    photoUrl: '',
+    distance: '4.5 km · 14 mins cab',
+    isVisible: true,
+    order: 11
+  },
+  {
+    id: 'spot-ridge',
+    name: 'Ridge Park & Flower Exhibition',
+    description: 'Lush botanical walkway and year-round orchid greenhouse with colorful Himalayan flora overlooking mountain mists.',
+    photoUrl: '',
+    distance: '400 m · 4 mins walk',
+    isVisible: true,
+    order: 12
+  }
+];
+
 const PHOTOS_COLLECTION = 'photos';
 const BOOKINGS_COLLECTION = 'bookings';
 const INQUIRIES_COLLECTION = 'customerInquiries';
 const GALLERY_COLLECTION = 'galleryPhotos';
 const ROOM_PRICING_COLLECTION = 'roomPricing';
+const CONTACTS_COLLECTION = 'contactNumbers';
+const TOURIST_SPOTS_COLLECTION = 'touristSpots';
+const LOCAL_CONTACTS_KEY = 'parijai_contact_numbers';
+const LOCAL_TOURIST_SPOTS_KEY = 'parijai_tourist_spots';
 
 // -------------------------------------------------------------
 // FIRESTORE QUOTA & RESILIENCE HANDLER
@@ -765,6 +982,20 @@ export async function updateBookingStatus(
   }
 }
 
+export async function deleteBookingFromDb(bookingId: string): Promise<void> {
+  const current = getLocalBookings();
+  const filtered = current.filter((b) => b.id !== bookingId);
+  saveLocalBookings(filtered);
+
+  try {
+    const docRef = doc(db, BOOKINGS_COLLECTION, bookingId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn('Notice deleting booking from cloud:', err);
+    throw err;
+  }
+}
+
 // -------------------------------------------------------------
 // CUSTOMER INQUIRIES & DIRECT INPUT REPOSITORY
 // -------------------------------------------------------------
@@ -794,6 +1025,148 @@ export async function saveCustomerInquiryToDb(
   }
 
   return fullInquiry;
+}
+
+export async function deleteCustomerInquiryFromDb(inquiryId: string): Promise<void> {
+  const current = getLocalInquiries();
+  const filtered = current.filter((i) => i.id !== inquiryId);
+  saveLocalInquiries(filtered);
+
+  try {
+    const docRef = doc(db, INQUIRIES_COLLECTION, inquiryId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn('Notice deleting customer inquiry from cloud:', err);
+    throw err;
+  }
+}
+
+// -------------------------------------------------------------
+// CONTACT NUMBERS REPOSITORY (LIVE SYNC & EDITABLE)
+// -------------------------------------------------------------
+
+function getLocalContacts(): ContactNumber[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_CONTACTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_CONTACT_NUMBERS;
+}
+
+function saveLocalContacts(contacts: ContactNumber[]): void {
+  try {
+    localStorage.setItem(LOCAL_CONTACTS_KEY, JSON.stringify(contacts));
+  } catch {
+    // ignore
+  }
+}
+
+export async function getContactNumbersFromDb(): Promise<ContactNumber[]> {
+  const local = getLocalContacts();
+  if (isFirestoreQuotaExceeded()) return local;
+
+  try {
+    const snap = await getDocs(collection(db, CONTACTS_COLLECTION));
+    if (snap.empty) {
+      return local;
+    }
+    const results: ContactNumber[] = [];
+    snap.forEach((d) => {
+      results.push({ ...(d.data() as ContactNumber), id: d.id });
+    });
+    results.sort((a, b) => (b.updatedTimestamp || 0) - (a.updatedTimestamp || 0));
+    saveLocalContacts(results);
+    return results;
+  } catch (err) {
+    checkAndMarkQuotaExceeded(err);
+    return local;
+  }
+}
+
+export function subscribeToContactNumbers(
+  callback: (contacts: ContactNumber[]) => void
+): Unsubscribe {
+  if (isFirestoreQuotaExceeded()) {
+    callback(getLocalContacts());
+    return () => {};
+  }
+
+  return onSnapshot(
+    collection(db, CONTACTS_COLLECTION),
+    (snapshot) => {
+      if (snapshot.empty) {
+        callback(getLocalContacts());
+        return;
+      }
+      const results: ContactNumber[] = [];
+      snapshot.forEach((d) => {
+        results.push({ ...(d.data() as ContactNumber), id: d.id });
+      });
+      results.sort((a, b) => (b.updatedTimestamp || 0) - (a.updatedTimestamp || 0));
+      saveLocalContacts(results);
+      callback(results);
+    },
+    (err) => {
+      checkAndMarkQuotaExceeded(err);
+      callback(getLocalContacts());
+    }
+  );
+}
+
+export async function saveContactNumberToDb(contact: ContactNumber): Promise<void> {
+  const current = getLocalContacts();
+  let updatedList = current.map((c) => {
+    // If the saved contact is primary for a property, unmark any other primary for that same property
+    if (
+      contact.isPrimary &&
+      c.id !== contact.id &&
+      (c.property === contact.property || contact.property === 'both' || c.property === 'both')
+    ) {
+      return { ...c, isPrimary: false };
+    }
+    return c;
+  });
+
+  const existingIdx = updatedList.findIndex((c) => c.id === contact.id);
+  const updatedContact: ContactNumber = {
+    ...contact,
+    updatedAt: new Date().toISOString(),
+    updatedTimestamp: Date.now()
+  };
+
+  if (existingIdx >= 0) {
+    updatedList[existingIdx] = updatedContact;
+  } else {
+    updatedList = [updatedContact, ...updatedList];
+  }
+  saveLocalContacts(updatedList);
+
+  try {
+    const docRef = doc(db, CONTACTS_COLLECTION, contact.id);
+    await setDoc(docRef, updatedContact, { merge: true });
+  } catch (err) {
+    console.warn('Notice saving contact number to database:', err);
+    throw err;
+  }
+}
+
+export async function deleteContactNumberFromDb(contactId: string): Promise<void> {
+  const current = getLocalContacts();
+  const filtered = current.filter((c) => c.id !== contactId);
+  saveLocalContacts(filtered);
+
+  try {
+    const docRef = doc(db, CONTACTS_COLLECTION, contactId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn('Notice deleting contact number from cloud:', err);
+    throw err;
+  }
 }
 
 export async function getCustomerInquiriesFromDb(): Promise<CustomerInquiry[]> {
@@ -1027,3 +1400,204 @@ export async function deleteGalleryPhotoFromDb(photo: GalleryPhoto): Promise<voi
     }
   }
 }
+
+// -------------------------------------------------------------
+// TOURIST SPOTS REPOSITORY & REALTIME SYNC
+// -------------------------------------------------------------
+
+export function getLocalTouristSpots(): TouristSpot[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_TOURIST_SPOTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.sort((a: TouristSpot, b: TouristSpot) => (a.order ?? 0) - (b.order ?? 0));
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_TOURIST_SPOTS;
+}
+
+export function saveLocalTouristSpots(spots: TouristSpot[]): void {
+  try {
+    localStorage.setItem(LOCAL_TOURIST_SPOTS_KEY, JSON.stringify(spots));
+  } catch {
+    // ignore
+  }
+}
+
+export async function getTouristSpotsFromDb(): Promise<TouristSpot[]> {
+  const local = getLocalTouristSpots();
+
+  if (isFirestoreQuotaExceeded()) {
+    return local;
+  }
+
+  try {
+    const snap = await getDocs(collection(db, TOURIST_SPOTS_COLLECTION));
+    if (snap.empty) {
+      // If collection is brand new, seed with default spots so existing site spots remain intact
+      saveLocalTouristSpots(DEFAULT_TOURIST_SPOTS);
+      return DEFAULT_TOURIST_SPOTS;
+    }
+
+    const results: TouristSpot[] = [];
+    snap.forEach((d) => {
+      results.push({ ...(d.data() as TouristSpot), id: d.id });
+    });
+
+    results.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    saveLocalTouristSpots(results);
+    return results;
+  } catch (err) {
+    checkAndMarkQuotaExceeded(err);
+    console.warn('Notice fetching tourist spots from cloud (serving local cache):', err);
+    return local;
+  }
+}
+
+export function subscribeToTouristSpots(
+  callback: (spots: TouristSpot[]) => void
+): Unsubscribe {
+  if (isFirestoreQuotaExceeded()) {
+    callback(getLocalTouristSpots());
+    return () => {};
+  }
+
+  return onSnapshot(
+    collection(db, TOURIST_SPOTS_COLLECTION),
+    (snapshot) => {
+      if (snapshot.empty) {
+        // Return default spots if collection is not yet populated
+        const fallback = getLocalTouristSpots();
+        callback(fallback);
+        return;
+      }
+
+      const results: TouristSpot[] = [];
+      snapshot.forEach((d) => {
+        results.push({ ...(d.data() as TouristSpot), id: d.id });
+      });
+
+      results.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      saveLocalTouristSpots(results);
+      callback(results);
+    },
+    (err) => {
+      checkAndMarkQuotaExceeded(err);
+      console.warn('Tourist spots realtime notice (serving local cache):', err?.message || err);
+      callback(getLocalTouristSpots());
+    }
+  );
+}
+
+export async function saveTouristSpotToDb(spot: TouristSpot): Promise<void> {
+  const current = getLocalTouristSpots();
+  const existingIdx = current.findIndex((s) => s.id === spot.id);
+  const now = new Date().toISOString();
+
+  const spotToSave: TouristSpot = {
+    ...spot,
+    updatedAt: now,
+    createdAt: spot.createdAt || now
+  };
+
+  let updatedList: TouristSpot[];
+  if (existingIdx >= 0) {
+    updatedList = [...current];
+    updatedList[existingIdx] = spotToSave;
+  } else {
+    updatedList = [...current, spotToSave];
+  }
+
+  updatedList.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  saveLocalTouristSpots(updatedList);
+
+  try {
+    const docRef = doc(db, TOURIST_SPOTS_COLLECTION, spot.id);
+    await setDoc(docRef, spotToSave, { merge: true });
+  } catch (err) {
+    console.warn('Notice saving tourist spot to cloud:', err);
+    throw err;
+  }
+}
+
+export async function deleteTouristSpotFromDb(spotId: string): Promise<void> {
+  const current = getLocalTouristSpots();
+  const filtered = current.filter((s) => s.id !== spotId);
+  saveLocalTouristSpots(filtered);
+
+  try {
+    const docRef = doc(db, TOURIST_SPOTS_COLLECTION, spotId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn('Notice deleting tourist spot from cloud:', err);
+    throw err;
+  }
+}
+
+export async function reorderTouristSpotsInDb(spots: TouristSpot[]): Promise<void> {
+  const reordered = spots.map((spot, index) => ({
+    ...spot,
+    order: index + 1,
+    updatedAt: new Date().toISOString()
+  }));
+
+  saveLocalTouristSpots(reordered);
+
+  try {
+    await Promise.all(
+      reordered.map((spot) => {
+        const docRef = doc(db, TOURIST_SPOTS_COLLECTION, spot.id);
+        return setDoc(docRef, spot, { merge: true });
+      })
+    );
+  } catch (err) {
+    console.warn('Notice reordering tourist spots in cloud:', err);
+    throw err;
+  }
+}
+
+export async function toggleTouristSpotVisibilityInDb(
+  spotId: string,
+  isVisible: boolean
+): Promise<void> {
+  const current = getLocalTouristSpots();
+  const updated = current.map((s) =>
+    s.id === spotId ? { ...s, isVisible, updatedAt: new Date().toISOString() } : s
+  );
+  saveLocalTouristSpots(updated);
+
+  try {
+    const docRef = doc(db, TOURIST_SPOTS_COLLECTION, spotId);
+    await setDoc(docRef, { isVisible, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch (err) {
+    console.warn('Notice updating tourist spot visibility in cloud:', err);
+    throw err;
+  }
+}
+
+export async function uploadTouristSpotPhoto(file: File): Promise<string> {
+  let finalUrl = '';
+
+  // 1. Attempt Cloud Storage upload
+  try {
+    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `tourist_spots/${Date.now()}_${cleanName}`;
+    const storageRef = ref(storage, storagePath);
+    await uploadBytes(storageRef, file);
+    finalUrl = await getDownloadURL(storageRef);
+  } catch (storageErr) {
+    console.warn('Cloud Storage photo upload notice (using optimized fallback):', storageErr);
+  }
+
+  // 2. If storage upload didn't return URL, compress to compact data URL
+  if (!finalUrl) {
+    finalUrl = await compressImageFile(file, 1280, 0.78);
+  }
+
+  return finalUrl;
+}
+

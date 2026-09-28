@@ -75,6 +75,31 @@
         "updatedAt": { "type": "string" },
         "updatedTimestamp": { "type": "number" }
       }
+    },
+    "contactNumbers": {
+      "fields": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "property": { "type": "string", "enum": ["gangtok", "kalyani", "both"] },
+        "purpose": { "type": "string", "enum": ["call", "whatsapp", "both"] },
+        "isPrimary": { "type": "boolean" },
+        "updatedAt": { "type": "string" },
+        "updatedTimestamp": { "type": "number" }
+      }
+    },
+    "touristSpots": {
+      "fields": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "distance": { "type": "string" },
+        "isVisible": { "type": "boolean" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
     }
   }
 }

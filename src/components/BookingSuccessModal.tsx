@@ -21,21 +21,22 @@ import {
 import { BookingConfirmationSummary } from '../data/hotels';
 import { useTheme } from '../context/ThemeContext';
 import { ParijaiLogo } from './ParijaiLogo';
+import { useContact } from '../context/ContactContext';
+import { formatWhatsAppLink } from '../services/dbService';
 
 interface BookingSuccessModalProps {
   summary: BookingConfirmationSummary | null;
   isOpen: boolean;
   onClose: () => void;
-  onOpenDatabase?: () => void;
 }
 
 export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
   summary,
   isOpen,
-  onClose,
-  onOpenDatabase
+  onClose
 }) => {
   const { isNight } = useTheme();
+  const { getPrimaryWhatsApp } = useContact();
   const [copied, setCopied] = useState(false);
 
   if (!isOpen || !summary) return null;
@@ -62,8 +63,8 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
       (summary.specialNeeds ? `*Special Request:* ${summary.specialNeeds}\n` : '') +
       `\nPlease keep my room ready. Thank you!`;
 
-    const cleanPhone = summary.propertyWhatsapp.replace(/[^0-9]/g, '');
-    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    const activeWhatsApp = getPrimaryWhatsApp(summary.propertyId) || summary.propertyWhatsapp;
+    return formatWhatsAppLink(activeWhatsApp, text);
   };
 
   return (
@@ -339,24 +340,11 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
             </button>
           </div>
 
-          {/* Database link & dismiss */}
-          <div className="flex items-center justify-between pt-2 text-xs print:hidden">
-            {onOpenDatabase && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenDatabase();
-                }}
-                className="text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-              >
-                <Database className="w-3.5 h-3.5" />
-                <span>View in Cloud Database Records</span>
-              </button>
-            )}
-
+          {/* Dismiss CTA */}
+          <div className="flex items-center justify-end pt-2 text-xs print:hidden">
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-auto font-medium"
+              className="py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-colors cursor-pointer font-medium"
             >
               Done & Return to Site
             </button>

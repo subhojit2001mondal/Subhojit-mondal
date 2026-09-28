@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { TESTIMONIALS, FAQS, PROPERTIES } from '../data/hotels';
 import { useTheme } from '../context/ThemeContext';
+import { useTouristSpots } from '../context/TouristSpotsContext';
 
 interface LocalGuidesAndTrustProps {
   selectedProperty?: 'gangtok' | 'kalyani';
@@ -32,6 +33,7 @@ export const LocalGuidesAndTrust: React.FC<LocalGuidesAndTrustProps> = ({
     isGangtok ? 'permits' : 'medical'
   );
   const { isNight } = useTheme();
+  const { visibleSpots } = useTouristSpots();
 
   // Filter reviews matching the active property
   const relevantTestimonials = TESTIMONIALS.filter((t) =>
@@ -107,63 +109,43 @@ export const LocalGuidesAndTrust: React.FC<LocalGuidesAndTrustProps> = ({
                   </p>
 
                   <div className="mt-6 space-y-3">
-                    <div
-                      className={`flex items-center justify-between p-3 rounded-lg border text-xs ${
-                        isNight
-                          ? 'bg-slate-900 border-slate-800/80 text-white'
-                          : 'bg-slate-50 border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-2 h-2 rounded-full bg-amber-500" />
-                        <span className="font-semibold">MG Marg Mall Promenade</span>
+                    {visibleSpots.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-400">
+                        No tourist spots currently visible.
                       </div>
-                      <span className="font-mono text-amber-600 dark:text-amber-300 font-semibold">
-                        1.2 km · 7 mins walk or cab
-                      </span>
-                    </div>
-
-                    <div
-                      className={`flex items-center justify-between p-3 rounded-lg border text-xs ${
-                        isNight
-                          ? 'bg-slate-900 border-slate-800/80 text-white'
-                          : 'bg-slate-50 border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-2 h-2 rounded-full bg-slate-400" />
-                        <span>Gangtok Ropeway Cable Car</span>
-                      </div>
-                      <span className="font-mono">2.4 km · 10 mins</span>
-                    </div>
-
-                    <div
-                      className={`flex items-center justify-between p-3 rounded-lg border text-xs ${
-                        isNight
-                          ? 'bg-slate-900 border-slate-800/80 text-white'
-                          : 'bg-slate-50 border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-2 h-2 rounded-full bg-slate-400" />
-                        <span>Rumtek Monastery & Enchey Gompa</span>
-                      </div>
-                      <span className="font-mono">Scenic 30-40 mins day excursion</span>
-                    </div>
-
-                    <div
-                      className={`flex items-center justify-between p-3 rounded-lg border text-xs ${
-                        isNight
-                          ? 'bg-slate-900 border-slate-800/80 text-white'
-                          : 'bg-slate-50 border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-2 h-2 rounded-full bg-slate-400" />
-                        <span>Tsomgo (Changu) Lake & Nathula Pass</span>
-                      </div>
-                      <span className="font-mono">Permits processed at hotel travel desk</span>
-                    </div>
+                    ) : (
+                      visibleSpots.map((spot) => (
+                        <div
+                          key={spot.id}
+                          className={`p-3.5 sm:p-4 rounded-xl border transition-all ${
+                            isNight
+                              ? 'bg-slate-900 border-slate-800/80 text-white'
+                              : 'bg-slate-50 border-slate-200 text-slate-800'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                              <span className="font-semibold text-xs sm:text-sm font-serif">
+                                {spot.name}
+                              </span>
+                            </div>
+                            {spot.distance && (
+                              <span className="font-mono text-amber-600 dark:text-amber-300 font-semibold text-[11px] shrink-0">
+                                {spot.distance}
+                              </span>
+                            )}
+                          </div>
+                          <p
+                            className={`text-xs mt-1.5 leading-relaxed ${
+                              isNight ? 'text-slate-400' : 'text-slate-600'
+                            }`}
+                          >
+                            {spot.description}
+                          </p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 

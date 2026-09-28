@@ -1,6 +1,7 @@
 import React from 'react';
 import { PhoneCall, Calendar, MessageCircle, Sparkles, Mountain, Building } from 'lucide-react';
 import { PROPERTIES } from '../data/hotels';
+import { useContact } from '../context/ContactContext';
 
 interface MobileFloatingDockProps {
   selectedProperty: 'gangtok' | 'kalyani';
@@ -13,6 +14,9 @@ export const MobileFloatingDock: React.FC<MobileFloatingDockProps> = ({
 }) => {
   const property = PROPERTIES[selectedProperty];
   const isGangtok = selectedProperty === 'gangtok';
+  const { getPrimaryPhone, getCallLink } = useContact();
+  const activePhone = getPrimaryPhone(selectedProperty);
+  const activeCallLink = getCallLink(selectedProperty);
 
   return (
     <aside
@@ -42,8 +46,8 @@ export const MobileFloatingDock: React.FC<MobileFloatingDockProps> = ({
         <div className="grid grid-cols-12 gap-1.5 items-stretch">
           {/* Direct Phone Call Helpline */}
           <a
-            href="tel:+919163008361"
-            aria-label="Call Parijay Group Helpline +91 91630 08361"
+            href={activeCallLink}
+            aria-label={`Call Parijay Group Helpline ${activePhone}`}
             className="col-span-5 flex items-center justify-center gap-2 py-2.5 px-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 active:scale-[0.98] border border-emerald-500/40 text-emerald-400 transition-all duration-150 cursor-pointer shadow-sm select-none"
           >
             <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0 border border-emerald-500/30">
@@ -54,7 +58,7 @@ export const MobileFloatingDock: React.FC<MobileFloatingDockProps> = ({
                 Call Desk
               </span>
               <span className="text-[8.5px] xs:text-[9.5px] font-mono text-emerald-300/90 truncate">
-                24/7 Helpline
+                {activePhone}
               </span>
             </div>
           </a>

@@ -6,6 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ContactProvider } from './context/ContactContext';
+import { TouristSpotsProvider } from './context/TouristSpotsContext';
 import { Navbar } from './components/Navbar';
 import { HeroBookingBar } from './components/HeroBookingBar';
 import { PropertyShowcase } from './components/PropertyShowcase';
@@ -13,8 +15,7 @@ import { LocalGuidesAndTrust } from './components/LocalGuidesAndTrust';
 import { Footer } from './components/Footer';
 import { BookingFunnelModal } from './components/BookingFunnelModal';
 import { HelpChatBubble } from './components/HelpChatBubble';
-import { DatabaseRecordsModal } from './components/DatabaseRecordsModal';
-import { ManagePhotosModal } from './components/ManagePhotosModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
 import { BookingSuccessModal } from './components/BookingSuccessModal';
 import { BookingSuccessToast } from './components/BookingSuccessToast';
 import { MobileFloatingDock } from './components/MobileFloatingDock';
@@ -35,11 +36,9 @@ function MainAppContent() {
   // Global booking state
   const [selectedProperty, setSelectedProperty] = useState<'gangtok' | 'kalyani'>('gangtok');
 
-  // Database Records modal state
-  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState<boolean>(false);
-
-  // Manage Photos modal state & gallery selection
-  const [isManagePhotosOpen, setIsManagePhotosOpen] = useState<boolean>(false);
+  // Unified Password-Protected Admin Panel State
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState<boolean>(false);
+  const [adminPanelInitialTab, setAdminPanelInitialTab] = useState<'customers' | 'photos' | 'pricing' | 'contacts' | 'touristSpots'>('customers');
   const [selectedManageGallery, setSelectedManageGallery] = useState<GalleryId>('gangtok/exterior');
 
   // Booking confirmation success modal and floating toast state
@@ -86,7 +85,8 @@ function MainAppContent() {
 
   const handleOpenManagePhotos = (galleryId: GalleryId = 'gangtok/exterior') => {
     setSelectedManageGallery(galleryId);
-    setIsManagePhotosOpen(true);
+    setAdminPanelInitialTab('photos');
+    setIsAdminPanelOpen(true);
   };
 
   const handleBookingCompleted = (summary: BookingConfirmationSummary) => {
@@ -174,8 +174,10 @@ function MainAppContent() {
         selectedProperty={selectedProperty}
         onBookClick={handleBookNowCTA}
         onSelectProperty={handleSelectProperty}
-        onOpenDatabaseRecords={() => setIsDatabaseModalOpen(true)}
-        onOpenManagePhotos={() => handleOpenManagePhotos(selectedProperty === 'gangtok' ? 'gangtok/exterior' : 'kalyani/exterior')}
+        onOpenAdminPanel={() => {
+          setAdminPanelInitialTab('customers');
+          setIsAdminPanelOpen(true);
+        }}
       />
 
       {/* Main Content Landmark */}
@@ -206,7 +208,6 @@ function MainAppContent() {
           isLoading={isLoadingAvailability}
           galleryPhotos={galleryPhotos}
           roomPrices={roomPrices}
-          onOpenManagePhotos={handleOpenManagePhotos}
         />
 
         {/* Interactive Landmark Map & Distance Section for Selected Hotel */}
@@ -221,25 +222,21 @@ function MainAppContent() {
         selectedProperty={selectedProperty}
         onBookNow={handleBookNowCTA}
         onSelectProperty={handleSelectProperty}
-        onOpenDatabaseRecords={() => setIsDatabaseModalOpen(true)}
-        onOpenManagePhotos={() => handleOpenManagePhotos(selectedProperty === 'gangtok' ? 'gangtok/exterior' : 'kalyani/exterior')}
+        onOpenAdminPanel={() => {
+          setAdminPanelInitialTab('customers');
+          setIsAdminPanelOpen(true);
+        }}
       />
 
-      {/* Cloud Firestore Database Records & Customer Input Modal */}
-      <DatabaseRecordsModal
-        isOpen={isDatabaseModalOpen}
-        onClose={() => setIsDatabaseModalOpen(false)}
-        onSelectProperty={handleSelectProperty}
-      />
-
-      {/* Persistent Cloud Photo Manager & Room Pricing Admin Panel */}
-      <ManagePhotosModal
-        isOpen={isManagePhotosOpen}
-        onClose={() => setIsManagePhotosOpen(false)}
+      {/* Unified Password-Protected Firebase Admin Panel with 4 Sections */}
+      <AdminPanelModal
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
         galleryPhotos={galleryPhotos}
         initialGallery={selectedManageGallery}
         roomPrices={roomPrices}
         onUpdateRoomPrice={handleUpdateRoomPrice}
+        initialTab={adminPanelInitialTab}
       />
 
       {/* Multi-Step Booking Funnel Modal */}
@@ -268,7 +265,6 @@ function MainAppContent() {
         summary={bookingSuccessSummary}
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
-        onOpenDatabase={() => setIsDatabaseModalOpen(true)}
       />
 
       {/* Floating Success Toast Notification with Reference Number & Quick Actions */}
@@ -298,7 +294,11 @@ export default function App() {
   return (
     <APIProvider apiKey={mapsApiKey} libraries={['places', 'marker']}>
       <ThemeProvider>
-        <MainAppContent />
+        <ContactProvider>
+          <TouristSpotsProvider>
+            <MainAppContent />
+          </TouristSpotsProvider>
+        </ContactProvider>
       </ThemeProvider>
     </APIProvider>
   );
