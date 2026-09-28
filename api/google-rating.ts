@@ -12,6 +12,16 @@ interface ExtendedResponse extends ServerResponse {
   json?: (data: unknown) => ExtendedResponse;
 }
 
+function sendJson(res: ExtendedResponse, statusCode: number, data: unknown) {
+  res.setHeader('Content-Type', 'application/json');
+  res.statusCode = statusCode;
+  if (res.json) {
+    res.json(data);
+  } else {
+    res.end(JSON.stringify(data));
+  }
+}
+
 export default async function handler(req: ExtendedRequest, res: ExtendedResponse) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,50 +35,54 @@ export default async function handler(req: ExtendedRequest, res: ExtendedRespons
   }
 
   if (req.method !== 'GET') {
-    res.statusCode = 405;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'Method Not Allowed' }));
-    return;
+    return sendJson(res, 405, { error: 'Method Not Allowed. Use GET.' });
   }
 
   // Parse requested property from query string or URL
   const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  const propertyParam = (parsedUrl.searchParams.get('property') || (req.query && req.query.property)) as string | undefined;
+  const propertyParam = (
+    parsedUrl.searchParams.get('property') ||
+    (req.query && (Array.isArray(req.query.property) ? req.query.property[0] : req.query.property))
+  );
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
-    res.statusCode = 503;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'GOOGLE_PLACES_API_KEY is not configured on the server' }));
-    return;
+    return sendJson(res, 500, {
+      error: 'Missing GOOGLE_PLACES_API_KEY environment variable. Add it in Vercel under Project Settings → Environment Variables.'
+    });
   }
 
-  const prop = (propertyParam || '').toLowerCase();
+  const prop = (propertyParam || '').trim().toLowerCase();
   let placeId = '';
 
-  if (prop === 'gangtok' || prop === 'trikuta') {
+  if (prop === 'gangtok' || prop === 'trikuta' || prop === 'trikuta-residency') {
     placeId = process.env.PLACE_ID_TRIKUTA || '';
+    if (!placeId) {
+      return sendJson(res, 500, {
+        error: 'Missing PLACE_ID_TRIKUTA environment variable. Add it in Vercel under Project Settings → Environment Variables.'
+      });
+    }
   } else if (prop === 'kalyani' || prop === 'parijaye' || prop === 'hotel-parijaye') {
     placeId = process.env.PLACE_ID_PARIJAYE || '';
-  }
-
-  // Allow explicit placeId query override if provided
-  const directPlaceId = parsedUrl.searchParams.get('placeId') || (req.query && (req.query.placeId as string));
-  if (directPlaceId) {
-    placeId = directPlaceId;
-  }
-
-  if (!placeId) {
-    res.statusCode = 400;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({
-      error: `Missing Place ID for property "${propertyParam}". Ensure PLACE_ID_TRIKUTA and PLACE_ID_PARIJAYE are set.`
-    }));
-    return;
+    if (!placeId) {
+      return sendJson(res, 500, {
+        error: 'Missing PLACE_ID_PARIJAYE environment variable. Add it in Vercel under Project Settings → Environment Variables.'
+      });
+    }
+  } else {
+    // If explicit placeId is provided in query for testing
+    const directPlaceId = parsedUrl.searchParams.get('placeId') || (req.query && (req.query.placeId as string));
+    if (directPlaceId) {
+      placeId = directPlaceId;
+    } else {
+      return sendJson(res, 400, {
+        error: `Missing or invalid property parameter "${propertyParam || ''}". Please use ?property=gangtok or ?property=kalyani.`
+      });
+    }
   }
 
   try {
-    // Places API (New) Place Details endpoint
+    // Google Places API (New) Place Details endpoint
     const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`;
     const googleRes = await fetch(endpoint, {
       method: 'GET',
@@ -80,32 +94,35 @@ export default async function handler(req: ExtendedRequest, res: ExtendedRespons
     });
 
     if (!googleRes.ok) {
-      const errBody = await googleRes.text();
-      res.statusCode = googleRes.status;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({
-        error: 'Failed to retrieve place details from Google Places API (New)',
-        status: googleRes.status,
-        details: errBody
-      }));
-      return;
+      const errText = await googleRes.text();
+      let googleMessage = `Status ${googleRes.status}`;
+      try {
+        const parsedErr = JSON.parse(errText);
+        if (parsedErr?.error?.message) {
+          googleMessage = parsedErr.error.message;
+        }
+      } catch {
+        if (errText) googleMessage = errText.slice(0, 150);
+      }
+
+      return sendJson(res, googleRes.status, {
+        error: `Google Places API returned an error: ${googleMessage}`
+      });
     }
 
     const data = await googleRes.json();
 
-    // Cache-Control: 1 hour HTTP cache as per requirement
+    // Cache-Control: 1 hour HTTP cache (3600s), stale-while-revalidate for fast delivery
     res.setHeader('Cache-Control', 'public, s-maxage=3600, max-age=3600, stale-while-revalidate=1800');
-    res.setHeader('Content-Type', 'application/json');
-    res.statusCode = 200;
-    res.end(JSON.stringify({
+    return sendJson(res, 200, {
       rating: typeof data.rating === 'number' ? data.rating : null,
       userRatingCount: typeof data.userRatingCount === 'number' ? data.userRatingCount : null,
       googleMapsUri: typeof data.googleMapsUri === 'string' ? data.googleMapsUri : null
-    }));
+    });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    res.statusCode = 500;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'Internal server error while fetching Google rating', message }));
+    const message = err instanceof Error ? err.message : 'Unknown network failure';
+    return sendJson(res, 500, {
+      error: `Internal server error while fetching Google rating: ${message}`
+    });
   }
 }
