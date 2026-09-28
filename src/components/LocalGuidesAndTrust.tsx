@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { GoogleRatingBadge } from './GoogleRatingBadge';
 import {
   Compass,
   HeartPulse,
@@ -277,11 +278,12 @@ export const LocalGuidesAndTrust: React.FC<LocalGuidesAndTrustProps> = ({
               </h2>
             </div>
 
-            <div className={`flex items-center gap-3 text-xs ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>
-              <span className="font-semibold">{property.rating} / 5.0</span>
-              <span>·</span>
-              <span>Based on {property.reviewCount}+ Google Reviews</span>
-            </div>
+            <GoogleRatingBadge
+              propertyId={property.id}
+              isNight={isNight}
+              fallbackMapUrl={property.mapUrl}
+              variant="section"
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

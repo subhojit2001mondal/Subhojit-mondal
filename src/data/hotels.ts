@@ -32,9 +32,9 @@ export interface Property {
   district: string;
   landmark: string;
   distanceToLandmark: string;
-  rating: number;
-  reviewCount: number;
-  tripAdvisorRating: number;
+  rating?: number;
+  reviewCount?: number;
+  tripAdvisorRating?: number;
   startingPrice: number;
   vibe: string;
   description: string;
@@ -96,9 +96,6 @@ export const PROPERTIES: Record<'gangtok' | 'kalyani', Property> = {
     district: 'East Sikkim',
     landmark: 'near District Court, Upper Sichey',
     distanceToLandmark: '7 mins to MG Marg',
-    rating: 4.7,
-    reviewCount: 382,
-    tripAdvisorRating: 4.6,
     startingPrice: 2250,
     vibe: 'Serene Himalayan mountain retreat, valley views & cozy timber aesthetics',
     description: 'Perched in the tranquil hill slopes of Gangtok near District Court, Trikuta Residency offers pristine views of the Kanchenjunga range, cedar-insulated rooms with electric bed warmers, authentic Sikkimese & Indian cuisine, and seamless tour permits desk.',
@@ -121,7 +118,7 @@ export const PROPERTIES: Record<'gangtok' | 'kalyani', Property> = {
     email: 'trikuta.gangtok@parijaigroup.com',
     address: 'near District Court, Upper Sichey, Gangtok, Sikkim 737101',
     mapQuery: 'Trikuta+Residency+Parijay+Group+Gangtok+Sikkim',
-    mapUrl: 'https://maps.app.goo.gl/UXcc68jGZGVdVyPW9'
+    mapUrl: 'https://maps.app.goo.gl/BxFvk46p5H7u6FKF9?g_st=ac'
   },
   kalyani: {
     id: 'kalyani',
@@ -131,9 +128,6 @@ export const PROPERTIES: Record<'gangtok' | 'kalyani', Property> = {
     district: 'Nadia District',
     landmark: 'AIIMS Kalyani Main Gate & OPD',
     distanceToLandmark: '3 mins (800m) to AIIMS OPD',
-    rating: 4.8,
-    reviewCount: 429,
-    tripAdvisorRating: 4.7,
     startingPrice: 1950,
     vibe: 'Pristine, hygienic, elevator-equipped comfort stay tailored for medical convenience & long-term care',
     description: 'Specially engineered for AIIMS patient attendants, visiting doctors, and recovery guests. Located in Basantapur just 2-3 minutes from AIIMS Kalyani Gate 1 with dedicated e-rickshaw transit, wheelchair accessibility, elevator, and sanitized kitchen preparing customized light meals.',

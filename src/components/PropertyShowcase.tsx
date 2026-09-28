@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { GoogleRatingBadge } from './GoogleRatingBadge';
 import {
   Mountain,
   Building,
@@ -142,89 +143,49 @@ export const PropertyShowcase: React.FC<PropertyShowcaseProps> = ({
         <div id={isGangtok ? 'trikuta-residency' : 'hotel-parijaye'} className="scroll-mt-24">
           {/* Header Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-start sm:items-center gap-3.5">
-              <div
-                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-md border ${
-                  isGangtok
-                    ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 border-amber-300'
-                    : 'bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-emerald-300'
-                }`}
-              >
-                {isGangtok ? <Mountain className="w-7 h-7" /> : <Building className="w-7 h-7" />}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3
-                    className={`text-2xl sm:text-3xl font-serif font-bold tracking-tight ${
-                      isNight ? 'text-white' : 'text-slate-900'
-                    }`}
-                  >
-                    {property.name}
-                  </h3>
-                  <span
-                    className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                      isGangtok
-                        ? 'bg-amber-400/15 text-amber-500 border-amber-400/30'
-                        : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                    }`}
-                  >
-                    {property.location}
-                  </span>
-                </div>
-
-                <a
-                  href={property.mapUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 transition-colors ${
-                    isGangtok ? 'hover:text-amber-500 dark:hover:text-amber-400' : 'hover:text-emerald-500 dark:hover:text-emerald-400'
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3
+                  className={`text-2xl sm:text-3xl font-serif font-bold tracking-tight ${
+                    isNight ? 'text-white' : 'text-slate-900'
                   }`}
-                  title="View Google Maps Location"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span>{property.address}</span>
-                  <ExternalLink className="w-3 h-3 opacity-60" />
-                </a>
+                  {property.name}
+                </h3>
+                <span
+                  className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                    isGangtok
+                      ? 'bg-amber-400/15 text-amber-500 border-amber-400/30'
+                      : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                  }`}
+                >
+                  {property.location}
+                </span>
               </div>
+
+              <a
+                href={property.mapUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 transition-colors ${
+                  isGangtok ? 'hover:text-amber-500 dark:hover:text-amber-400' : 'hover:text-emerald-500 dark:hover:text-emerald-400'
+                }`}
+                title="View Google Maps Location"
+              >
+                <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                <span>{property.address}</span>
+                <ExternalLink className="w-3 h-3 opacity-60" />
+              </a>
             </div>
 
-            {/* Ratings & Quick Admin Link */}
+            {/* Real Google Rating & Quick Admin Link */}
             <div className="flex items-center gap-3 flex-wrap">
-              <div
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold ${
-                  isNight
-                    ? 'bg-slate-900/90 border-slate-800 text-slate-200'
-                    : 'bg-white border-slate-200 text-slate-800 shadow-xs'
-                }`}
-              >
-                <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[9px] font-bold">
-                  ●
-                </div>
-                <div className="flex items-center gap-1 text-emerald-500">
-                  <span>●●●●◐</span>
-                </div>
-                <span className="text-[11px] text-slate-400">{property.reviewCount * 2}+ reviews</span>
-              </div>
-
-              <div
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold ${
-                  isNight
-                    ? 'bg-slate-900/90 border-slate-800 text-slate-200'
-                    : 'bg-white border-slate-200 text-slate-800 shadow-xs'
-                }`}
-              >
-                <span className="font-bold text-xs tracking-tight">
-                  <span className="text-blue-500">G</span>
-                  <span className="text-rose-500">o</span>
-                  <span className="text-amber-500">o</span>
-                  <span className="text-blue-500">g</span>
-                  <span className="text-emerald-500">l</span>
-                  <span className="text-rose-500">e</span>
-                </span>
-                <span className="text-amber-400 font-mono font-bold">{property.rating} ★</span>
-                <span className="text-[11px] text-slate-400">{property.reviewCount} reviews</span>
-              </div>
+              <GoogleRatingBadge
+                propertyId={property.id}
+                isNight={isNight}
+                fallbackMapUrl={property.mapUrl}
+                variant="header"
+              />
 
               {onOpenManagePhotos && (
                 <button
