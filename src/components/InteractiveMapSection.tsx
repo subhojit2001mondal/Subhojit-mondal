@@ -469,176 +469,86 @@ function HotelCenterFocus({ center }: { center: { lat: number; lng: number } }) 
 }
 
 // =========================================================================
-// ON-BRAND LUXURY FALLBACK MAP PREVIEW
-// Rendered when Google Maps API key is missing, unauthorized (RefererNotAllowed),
-// unbilled, or fails to load, gracefully preventing any raw Google error modals.
+// REAL INTERACTIVE GOOGLE MAP EMBED (ZERO API-KEY ERRORS)
+// Uses Google's official public embed engine to display the real, live
+// interactive map with full roads, satellite imagery, and destination routing.
+// 100% immune to MissingKeyMapError, RefererNotAllowed, and billing popups.
 // =========================================================================
 function FallbackMapPreview({
   data,
   activeLandmark,
+  mapTypeId,
   isAmber,
-  isNight,
   hotelDirectionsFromCurrentLocationUrl,
   activeCallLink,
   onClearLandmark
 }: {
   data: PropertyMapData;
   activeLandmark: Landmark | null;
+  mapTypeId: 'roadmap' | 'satellite' | 'hybrid';
   isAmber: boolean;
   isNight: boolean;
   hotelDirectionsFromCurrentLocationUrl: string;
   activeCallLink: string;
   onClearLandmark: () => void;
 }) {
+  const mapType = mapTypeId === 'satellite' || mapTypeId === 'hybrid' ? 'k' : 'm';
+
+  // Construct real Google Maps embed URL
+  const embedUrl = activeLandmark
+    ? `https://maps.google.com/maps?saddr=${data.center.lat},${data.center.lng}&daddr=${activeLandmark.lat},${activeLandmark.lng}&hl=en&z=13&t=${mapType}&output=embed`
+    : `https://maps.google.com/maps?q=${data.center.lat},${data.center.lng}&hl=en&z=15&t=${mapType}&output=embed`;
+
   return (
-    <div
-      className={`relative w-full h-full flex flex-col justify-between overflow-hidden p-4 sm:p-6 transition-all select-none ${
-        isNight ? 'bg-[#09111e] text-slate-100' : 'bg-slate-900 text-white'
-      }`}
-    >
-      {/* Decorative Cartographic Grid & Elevation Contours Background */}
-      <div className="absolute inset-0 pointer-events-none opacity-25 overflow-hidden">
-        {/* Subtle Map Coordinates Grid */}
-        <div
-          className="w-full h-full"
-          style={{
-            backgroundImage: `radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.12) 0%, transparent 60%),
-              linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
-            backgroundSize: '100% 100%, 36px 36px, 36px 36px'
-          }}
-        />
-        {/* Topographic Elevation Ring Patterns */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full border border-amber-400/20" />
-        <div className="absolute -top-12 -left-12 w-72 h-72 rounded-full border border-amber-400/15" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-white/5" />
-      </div>
+    <div className="relative w-full h-full overflow-hidden select-none bg-slate-950">
+      {/* 1. Real Live Google Maps Iframe */}
+      <iframe
+        key={`${data.id}-${activeLandmark?.id || 'hotel'}-${mapType}`}
+        title={`Google Maps - ${activeLandmark ? activeLandmark.name : data.name}`}
+        src={embedUrl}
+        className="absolute inset-0 w-full h-full border-0"
+        loading="lazy"
+        allowFullScreen
+        referrerPolicy="no-referrer-when-downgrade"
+      />
 
-      {/* Top HUD: Location Info & Status Pill */}
-      <div className="relative z-10 flex items-center justify-between gap-2 flex-wrap">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-xs shadow-lg">
-          <span className={`w-2 h-2 rounded-full ${isAmber ? 'bg-amber-400' : 'bg-emerald-400'} animate-ping`} />
-          <span className="font-bold text-amber-300">
-            {activeLandmark ? 'Route Mapping Active' : 'Hotel Pointed'}
+      {/* 2. Top Floating Navigation HUD Pill */}
+      <div className="absolute top-3 left-3 right-3 z-10 pointer-events-none flex items-center justify-between gap-2">
+        <div className="pointer-events-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 text-white shadow-xl text-xs max-w-[85%] truncate">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isAmber ? 'bg-amber-400' : 'bg-emerald-400'
+            } animate-ping shrink-0`}
+          />
+          <span className="font-bold text-amber-300 shrink-0">
+            {activeLandmark ? 'Route Destination:' : 'Hotel Pointed:'}
           </span>
-          <span className="text-white/40">|</span>
-          <span className="font-mono text-[10px] text-slate-300">
-            {activeLandmark ? `${activeLandmark.distance} from hotel` : 'Direct GPS Navigation'}
+          <span className="font-semibold truncate">
+            {activeLandmark ? activeLandmark.name : data.name}
+          </span>
+          <span className="text-white/40 hidden xs:inline">|</span>
+          <span className="text-[10px] text-emerald-300 font-mono hidden xs:inline shrink-0">
+            {activeLandmark ? activeLandmark.distance : 'Direct GPS Navigation'}
           </span>
         </div>
 
-        <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[11px] font-mono text-slate-300">
-          <MapPin className="w-3 h-3 text-amber-400" />
-          <span>
-            {activeLandmark
-              ? `${activeLandmark.lat.toFixed(4)}° N, ${activeLandmark.lng.toFixed(4)}° E`
-              : `${data.center.lat.toFixed(4)}° N, ${data.center.lng.toFixed(4)}° E`}
-          </span>
+        <div className="pointer-events-auto hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-950/85 backdrop-blur-md border border-white/20 text-[10px] font-bold text-amber-300 shadow-lg">
+          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+          <span>{data.id === 'gangtok' ? '5.0 ★ Google' : '3.3 ★ Google'}</span>
         </div>
       </div>
 
-      {/* Center Visual: The Stylized Visual Map Connection */}
-      <div className="relative z-10 my-auto py-4 flex flex-col items-center justify-center text-center">
-        {!activeLandmark ? (
-          /* Hotel-Only Radar View */
-          <div className="flex flex-col items-center">
-            {/* Animated Radar Pulse Rings */}
-            <div className="relative flex items-center justify-center mb-4">
-              <span className={`absolute w-28 h-28 rounded-full animate-ping opacity-25 ${isAmber ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-              <span className={`absolute w-20 h-20 rounded-full border-2 ${isAmber ? 'border-amber-400/50' : 'border-emerald-400/50'} animate-pulse`} />
-              
-              <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white ${
-                isAmber ? 'bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950' : 'bg-gradient-to-tr from-emerald-500 to-teal-300 text-white'
-              }`}>
-                {data.hotelIcon === 'mountain' ? (
-                  <Mountain className="w-7 h-7 text-slate-950" />
-                ) : (
-                  <Building className="w-7 h-7 text-slate-950" />
-                )}
-              </div>
-            </div>
-
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[11px] font-bold uppercase tracking-wider mb-2">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              <span>{data.id === 'gangtok' ? '5.0 ★ Google Verified' : '3.3 ★ Google Verified'}</span>
-            </div>
-
-            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mb-1.5 leading-tight">
-              ★ {data.name}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-md px-4 leading-relaxed mb-1">
-              {data.address}
-            </p>
-            <p className="text-[11px] text-amber-200/80 font-medium">
-              {data.location} · {data.badge}
-            </p>
-          </div>
-        ) : (
-          /* Active Route View between Hotel and Selected Landmark */
-          <div className="w-full max-w-lg flex flex-col items-center">
-            {/* Visual Route Connector Between Points */}
-            <div className="w-full flex items-center justify-between gap-3 px-2 sm:px-6 mb-4">
-              {/* Hotel Node */}
-              <div className="flex flex-col items-center text-center max-w-[120px]">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center border-2 border-white shadow-lg ${
-                  isAmber ? 'bg-amber-400 text-slate-950' : 'bg-emerald-400 text-slate-950'
-                }`}>
-                  {data.hotelIcon === 'mountain' ? <Mountain className="w-5 h-5" /> : <Building className="w-5 h-5" />}
-                </div>
-                <span className="font-bold text-xs text-white mt-1.5 truncate w-full">
-                  ★ {data.name}
-                </span>
-                <span className="text-[10px] text-amber-300 uppercase tracking-wider font-semibold">Origin</span>
-              </div>
-
-              {/* Connecting Short Path Route Line */}
-              <div className="flex-1 flex flex-col items-center px-1">
-                <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm ${
-                  isAmber ? 'bg-amber-400/20 text-amber-300 border-amber-400/50' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-                }`}>
-                  {activeLandmark.distance}
-                </span>
-                <div className="w-full flex items-center my-1.5">
-                  <div className={`h-0.5 flex-1 ${isAmber ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`} />
-                  <div className={`w-2 h-2 rounded-full mx-1 ${isAmber ? 'bg-amber-400' : 'bg-emerald-400'} animate-ping`} />
-                  <div className={`h-0.5 flex-1 ${isAmber ? 'bg-gradient-to-r from-amber-500 to-amber-400' : 'bg-gradient-to-r from-teal-500 to-emerald-400'}`} />
-                </div>
-                <div className="flex items-center gap-2 text-[10px] text-slate-300">
-                  <span>🚗 {activeLandmark.driveTime}</span>
-                  <span>·</span>
-                  <span>🚶 {activeLandmark.walkTime}</span>
-                </div>
-              </div>
-
-              {/* Destination Node */}
-              <div className="flex flex-col items-center text-center max-w-[120px]">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-white/60 bg-slate-800 text-amber-400 shadow-lg">
-                  <Navigation className="w-5 h-5" />
-                </div>
-                <span className="font-bold text-xs text-white mt-1.5 truncate w-full">
-                  {activeLandmark.name}
-                </span>
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{activeLandmark.categoryLabel}</span>
-              </div>
-            </div>
-
-            <div className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-slate-300 max-w-md text-center line-clamp-2">
-              {activeLandmark.travelTip || activeLandmark.description}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom CTA Card: Glassmorphic Turn-by-Turn GPS Navigation Controls */}
-      <div className="relative z-10 w-full pt-3 border-t border-white/10">
-        <div className="flex flex-col sm:flex-row items-center gap-2.5">
+      {/* 3. Bottom Floating Action Controls */}
+      <div className="absolute bottom-3 left-3 right-3 z-10 pointer-events-auto">
+        <div className="p-2 sm:p-2.5 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-white/20 shadow-2xl flex flex-col sm:flex-row items-center gap-2">
           {!activeLandmark ? (
             <>
+              {/* Primary Mobile Navigation CTA */}
               <a
                 href={hotelDirectionsFromCurrentLocationUrl}
                 target="_blank"
                 rel="noreferrer"
-                className={`w-full sm:flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer ${
+                className={`w-full sm:flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${
                   isAmber
                     ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 active:scale-[0.99]'
                     : 'bg-emerald-500 hover:bg-emerald-400 text-white active:scale-[0.99]'
@@ -648,21 +558,21 @@ function FallbackMapPreview({
                 <span>Navigate to Hotel from My Location →</span>
               </a>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                 <a
                   href={data.googleDirectionsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 sm:flex-none py-3 px-3.5 rounded-xl text-xs font-semibold text-center border border-white/20 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none py-2.5 px-3 rounded-xl text-xs font-semibold text-center border border-white/20 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Google Maps</span>
+                  <span className="whitespace-nowrap">Google Maps App</span>
                 </a>
 
                 <a
                   href={activeCallLink}
                   aria-label="Call Front Desk Reception"
-                  className="py-3 px-3.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-amber-300 flex items-center justify-center transition-colors cursor-pointer"
+                  className="py-2.5 px-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-amber-300 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                   title="Call Front Desk Reception"
                 >
                   <PhoneCall className="w-4 h-4" />
@@ -677,7 +587,7 @@ function FallbackMapPreview({
                 )}&destination=${encodeURIComponent(`${activeLandmark.lat},${activeLandmark.lng}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className={`w-full sm:flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer ${
+                className={`w-full sm:flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${
                   isAmber
                     ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 active:scale-[0.99]'
                     : 'bg-emerald-500 hover:bg-emerald-400 text-white active:scale-[0.99]'
@@ -690,7 +600,7 @@ function FallbackMapPreview({
               <button
                 type="button"
                 onClick={onClearLandmark}
-                className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-center border border-white/20 bg-white/10 hover:bg-white/20 text-slate-200 transition-colors cursor-pointer"
+                className="w-full sm:w-auto py-2.5 px-3.5 rounded-xl text-xs font-semibold text-center border border-white/20 bg-white/10 hover:bg-white/20 text-slate-200 transition-colors cursor-pointer"
               >
                 ← Back to Hotel View
               </button>
@@ -1418,6 +1328,7 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
                 <FallbackMapPreview
                   data={data}
                   activeLandmark={activeLandmark}
+                  mapTypeId={mapTypeId}
                   isAmber={isAmber}
                   isNight={isNight}
                   hotelDirectionsFromCurrentLocationUrl={hotelDirectionsFromCurrentLocationUrl}
