@@ -83,6 +83,29 @@
       ]
     }
     </script>
+    <!-- Global Google Maps Error Interceptor & Suppressor -->
+    <style>
+      /* Suppress raw Google Maps authentication error popups & watermarks from leaking to visitors */
+      .gm-err-container,
+      .gm-err-content,
+      .gm-err-icon,
+      .gm-err-title,
+      .gm-err-message,
+      .gm-err-autocomplete,
+      div[class*="gm-err"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    </style>
+    <script>
+      // Catch Google Maps authentication failure early before it shows broken dialog
+      window.gm_authFailure = function() {
+        console.warn('Google Maps Authentication Notice: Key missing, unbilled, or referrer unauthorized. Displaying graceful on-brand fallback.');
+        window.dispatchEvent(new CustomEvent('google-maps-auth-failure'));
+      };
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-amber-100 selection:text-slate-900">
     <div id="root"></div>

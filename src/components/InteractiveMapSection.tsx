@@ -6,6 +6,8 @@ import {
   InfoWindow,
   useMap,
   useMapsLibrary,
+  useApiLoadingStatus,
+  APILoadingStatus,
   ColorScheme
 } from '@vis.gl/react-google-maps';
 import {
@@ -466,6 +468,240 @@ function HotelCenterFocus({ center }: { center: { lat: number; lng: number } }) 
   return null;
 }
 
+// =========================================================================
+// ON-BRAND LUXURY FALLBACK MAP PREVIEW
+// Rendered when Google Maps API key is missing, unauthorized (RefererNotAllowed),
+// unbilled, or fails to load, gracefully preventing any raw Google error modals.
+// =========================================================================
+function FallbackMapPreview({
+  data,
+  activeLandmark,
+  isAmber,
+  isNight,
+  hotelDirectionsFromCurrentLocationUrl,
+  activeCallLink,
+  onClearLandmark
+}: {
+  data: PropertyMapData;
+  activeLandmark: Landmark | null;
+  isAmber: boolean;
+  isNight: boolean;
+  hotelDirectionsFromCurrentLocationUrl: string;
+  activeCallLink: string;
+  onClearLandmark: () => void;
+}) {
+  return (
+    <div
+      className={`relative w-full h-full flex flex-col justify-between overflow-hidden p-4 sm:p-6 transition-all select-none ${
+        isNight ? 'bg-[#09111e] text-slate-100' : 'bg-slate-900 text-white'
+      }`}
+    >
+      {/* Decorative Cartographic Grid & Elevation Contours Background */}
+      <div className="absolute inset-0 pointer-events-none opacity-25 overflow-hidden">
+        {/* Subtle Map Coordinates Grid */}
+        <div
+          className="w-full h-full"
+          style={{
+            backgroundImage: `radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.12) 0%, transparent 60%),
+              linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
+            backgroundSize: '100% 100%, 36px 36px, 36px 36px'
+          }}
+        />
+        {/* Topographic Elevation Ring Patterns */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full border border-amber-400/20" />
+        <div className="absolute -top-12 -left-12 w-72 h-72 rounded-full border border-amber-400/15" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-white/5" />
+      </div>
+
+      {/* Top HUD: Location Info & Status Pill */}
+      <div className="relative z-10 flex items-center justify-between gap-2 flex-wrap">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-xs shadow-lg">
+          <span className={`w-2 h-2 rounded-full ${isAmber ? 'bg-amber-400' : 'bg-emerald-400'} animate-ping`} />
+          <span className="font-bold text-amber-300">
+            {activeLandmark ? 'Route Mapping Active' : 'Hotel Pointed'}
+          </span>
+          <span className="text-white/40">|</span>
+          <span className="font-mono text-[10px] text-slate-300">
+            {activeLandmark ? `${activeLandmark.distance} from hotel` : 'Direct GPS Navigation'}
+          </span>
+        </div>
+
+        <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[11px] font-mono text-slate-300">
+          <MapPin className="w-3 h-3 text-amber-400" />
+          <span>
+            {activeLandmark
+              ? `${activeLandmark.lat.toFixed(4)}° N, ${activeLandmark.lng.toFixed(4)}° E`
+              : `${data.center.lat.toFixed(4)}° N, ${data.center.lng.toFixed(4)}° E`}
+          </span>
+        </div>
+      </div>
+
+      {/* Center Visual: The Stylized Visual Map Connection */}
+      <div className="relative z-10 my-auto py-4 flex flex-col items-center justify-center text-center">
+        {!activeLandmark ? (
+          /* Hotel-Only Radar View */
+          <div className="flex flex-col items-center">
+            {/* Animated Radar Pulse Rings */}
+            <div className="relative flex items-center justify-center mb-4">
+              <span className={`absolute w-28 h-28 rounded-full animate-ping opacity-25 ${isAmber ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+              <span className={`absolute w-20 h-20 rounded-full border-2 ${isAmber ? 'border-amber-400/50' : 'border-emerald-400/50'} animate-pulse`} />
+              
+              <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white ${
+                isAmber ? 'bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950' : 'bg-gradient-to-tr from-emerald-500 to-teal-300 text-white'
+              }`}>
+                {data.hotelIcon === 'mountain' ? (
+                  <Mountain className="w-7 h-7 text-slate-950" />
+                ) : (
+                  <Building className="w-7 h-7 text-slate-950" />
+                )}
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[11px] font-bold uppercase tracking-wider mb-2">
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              <span>{data.id === 'gangtok' ? '5.0 ★ Google Verified' : '3.3 ★ Google Verified'}</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mb-1.5 leading-tight">
+              ★ {data.name}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-md px-4 leading-relaxed mb-1">
+              {data.address}
+            </p>
+            <p className="text-[11px] text-amber-200/80 font-medium">
+              {data.location} · {data.badge}
+            </p>
+          </div>
+        ) : (
+          /* Active Route View between Hotel and Selected Landmark */
+          <div className="w-full max-w-lg flex flex-col items-center">
+            {/* Visual Route Connector Between Points */}
+            <div className="w-full flex items-center justify-between gap-3 px-2 sm:px-6 mb-4">
+              {/* Hotel Node */}
+              <div className="flex flex-col items-center text-center max-w-[120px]">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center border-2 border-white shadow-lg ${
+                  isAmber ? 'bg-amber-400 text-slate-950' : 'bg-emerald-400 text-slate-950'
+                }`}>
+                  {data.hotelIcon === 'mountain' ? <Mountain className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                </div>
+                <span className="font-bold text-xs text-white mt-1.5 truncate w-full">
+                  ★ {data.name}
+                </span>
+                <span className="text-[10px] text-amber-300 uppercase tracking-wider font-semibold">Origin</span>
+              </div>
+
+              {/* Connecting Short Path Route Line */}
+              <div className="flex-1 flex flex-col items-center px-1">
+                <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm ${
+                  isAmber ? 'bg-amber-400/20 text-amber-300 border-amber-400/50' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                }`}>
+                  {activeLandmark.distance}
+                </span>
+                <div className="w-full flex items-center my-1.5">
+                  <div className={`h-0.5 flex-1 ${isAmber ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`} />
+                  <div className={`w-2 h-2 rounded-full mx-1 ${isAmber ? 'bg-amber-400' : 'bg-emerald-400'} animate-ping`} />
+                  <div className={`h-0.5 flex-1 ${isAmber ? 'bg-gradient-to-r from-amber-500 to-amber-400' : 'bg-gradient-to-r from-teal-500 to-emerald-400'}`} />
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-slate-300">
+                  <span>🚗 {activeLandmark.driveTime}</span>
+                  <span>·</span>
+                  <span>🚶 {activeLandmark.walkTime}</span>
+                </div>
+              </div>
+
+              {/* Destination Node */}
+              <div className="flex flex-col items-center text-center max-w-[120px]">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-white/60 bg-slate-800 text-amber-400 shadow-lg">
+                  <Navigation className="w-5 h-5" />
+                </div>
+                <span className="font-bold text-xs text-white mt-1.5 truncate w-full">
+                  {activeLandmark.name}
+                </span>
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{activeLandmark.categoryLabel}</span>
+              </div>
+            </div>
+
+            <div className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-slate-300 max-w-md text-center line-clamp-2">
+              {activeLandmark.travelTip || activeLandmark.description}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom CTA Card: Glassmorphic Turn-by-Turn GPS Navigation Controls */}
+      <div className="relative z-10 w-full pt-3 border-t border-white/10">
+        <div className="flex flex-col sm:flex-row items-center gap-2.5">
+          {!activeLandmark ? (
+            <>
+              <a
+                href={hotelDirectionsFromCurrentLocationUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`w-full sm:flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer ${
+                  isAmber
+                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 active:scale-[0.99]'
+                    : 'bg-emerald-500 hover:bg-emerald-400 text-white active:scale-[0.99]'
+                }`}
+              >
+                <Navigation className="w-4 h-4 shrink-0" />
+                <span>Navigate to Hotel from My Location →</span>
+              </a>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <a
+                  href={data.googleDirectionsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 sm:flex-none py-3 px-3.5 rounded-xl text-xs font-semibold text-center border border-white/20 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Google Maps</span>
+                </a>
+
+                <a
+                  href={activeCallLink}
+                  aria-label="Call Front Desk Reception"
+                  className="py-3 px-3.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-amber-300 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Call Front Desk Reception"
+                >
+                  <PhoneCall className="w-4 h-4" />
+                </a>
+              </div>
+            </>
+          ) : (
+            <>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+                  data.address
+                )}&destination=${encodeURIComponent(`${activeLandmark.lat},${activeLandmark.lng}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className={`w-full sm:flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer ${
+                  isAmber
+                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 active:scale-[0.99]'
+                    : 'bg-emerald-500 hover:bg-emerald-400 text-white active:scale-[0.99]'
+                }`}
+              >
+                <Navigation className="w-4 h-4 shrink-0" />
+                <span>Navigate to {activeLandmark.name} →</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={onClearLandmark}
+                className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-center border border-white/20 bg-white/10 hover:bg-white/20 text-slate-200 transition-colors cursor-pointer"
+              >
+                ← Back to Hotel View
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface InteractiveMapSectionProps {
   selectedProperty?: 'gangtok' | 'kalyani';
 }
@@ -480,6 +716,35 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
 
   const data = selectedProperty === 'gangtok' ? GANGTOK_MAP_DATA : KALYANI_MAP_DATA;
   const isAmber = selectedProperty === 'gangtok';
+
+  // Check if API key is provided in environment
+  const rawEnvKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const hasEnvKey = Boolean(typeof rawEnvKey === 'string' && rawEnvKey.trim().length > 0);
+
+  // Status from @vis.gl/react-google-maps
+  const apiStatus = useApiLoadingStatus();
+
+  // Authentication error state (e.g. gm_authFailure, RefererNotAllowedMapError, ApiNotActivatedMapError)
+  const [hasAuthError, setHasAuthError] = useState(false);
+
+  // Listen for global gm_authFailure or custom failure events
+  useEffect(() => {
+    const handleAuthFailure = () => {
+      setHasAuthError(true);
+    };
+
+    window.addEventListener('google-maps-auth-failure', handleAuthFailure);
+    return () => {
+      window.removeEventListener('google-maps-auth-failure', handleAuthFailure);
+    };
+  }, []);
+
+  // Determine if Google Map can be safely displayed without errors
+  const isMapAvailable =
+    hasEnvKey &&
+    !hasAuthError &&
+    apiStatus !== APILoadingStatus.FAILED &&
+    apiStatus !== APILoadingStatus.AUTH_FAILURE;
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -924,227 +1189,244 @@ export const InteractiveMapSection: React.FC<InteractiveMapSectionProps> = ({
               }`}
               style={{ height: isFullscreen ? '70vh' : '520px', width: '100%' }}
             >
-              <Map
-                mapId="DEMO_MAP_ID"
-                internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
-                defaultCenter={data.center}
-                defaultZoom={12}
-                mapTypeId={mapTypeId}
-                colorScheme={isNight ? ColorScheme.DARK : ColorScheme.LIGHT}
-                gestureHandling="cooperative"
-                disableDefaultUI={false}
-                style={{ width: '100%', height: '100%' }}
-              >
-                {/* Short Map Direct Polyline Connection or Hotel Center Focus */}
-                {activeLandmark ? (
-                  <ShortMapPolyline
-                    origin={data.center}
-                    destination={{ lat: activeLandmark.lat, lng: activeLandmark.lng }}
-                    isAmber={isAmber}
-                  />
-                ) : (
-                  <HotelCenterFocus center={data.center} />
-                )}
+              {isMapAvailable ? (
+                <>
+                  <Map
+                    mapId="DEMO_MAP_ID"
+                    internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
+                    defaultCenter={data.center}
+                    defaultZoom={12}
+                    mapTypeId={mapTypeId}
+                    colorScheme={isNight ? ColorScheme.DARK : ColorScheme.LIGHT}
+                    gestureHandling="cooperative"
+                    disableDefaultUI={false}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    {/* Short Map Direct Polyline Connection or Hotel Center Focus */}
+                    {activeLandmark ? (
+                      <ShortMapPolyline
+                        origin={data.center}
+                        destination={{ lat: activeLandmark.lat, lng: activeLandmark.lng }}
+                        isAmber={isAmber}
+                      />
+                    ) : (
+                      <HotelCenterFocus center={data.center} />
+                    )}
 
-                {/* Hotel Origin Advanced Marker */}
-                <AdvancedMarker
-                  position={data.center}
-                  title={`${data.name} (Our Hotel - Direct Navigation Point)`}
-                  zIndex={45}
-                  onClick={() => {
-                    setSelectedLandmarkId(null);
-                    setIsInfoWindowOpen(true);
-                  }}
-                >
-                  <div className="relative group cursor-pointer flex flex-col items-center">
-                    <span
-                      className={`absolute w-10 h-10 rounded-full animate-ping opacity-75 ${
-                        isAmber ? 'bg-amber-400' : 'bg-emerald-400'
-                      }`}
-                    />
-                    <div
-                      className={`relative px-2.5 py-1.5 rounded-2xl flex items-center gap-1.5 font-bold text-slate-950 shadow-2xl border-2 border-white ${
-                        isAmber
-                          ? 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-amber-500/50'
-                          : 'bg-gradient-to-r from-emerald-400 to-teal-500 shadow-emerald-500/50'
-                      }`}
-                    >
-                      {data.hotelIcon === 'mountain' ? (
-                        <Mountain className="w-4 h-4 text-slate-950" />
-                      ) : (
-                        <Building className="w-4 h-4 text-slate-950" />
-                      )}
-                      <span className="text-[11px] whitespace-nowrap font-serif">
-                        ★ {data.name}
-                      </span>
-                    </div>
-                  </div>
-                </AdvancedMarker>
-
-                {/* Destinations Advanced Markers */}
-                {filteredLandmarks.map((landmark) => {
-                  const isSelected = landmark.id === activeLandmark?.id;
-
-                  return (
+                    {/* Hotel Origin Advanced Marker */}
                     <AdvancedMarker
-                      key={landmark.id}
-                      position={{ lat: landmark.lat, lng: landmark.lng }}
-                      title={`${landmark.name} (${landmark.distance})`}
-                      zIndex={isSelected ? 35 : 20}
+                      position={data.center}
+                      title={`${data.name} (Our Hotel - Direct Navigation Point)`}
+                      zIndex={45}
                       onClick={() => {
-                        setSelectedLandmarkId(landmark.id);
+                        setSelectedLandmarkId(null);
                         setIsInfoWindowOpen(true);
                       }}
                     >
-                      <Pin
-                        background={
-                          isSelected
-                            ? isAmber
-                              ? '#f59e0b'
-                              : '#10b981'
-                            : landmark.category === 'pass'
-                            ? '#0284c7'
-                            : landmark.category === 'medical'
-                            ? '#e11d48'
-                            : landmark.category === 'transit'
-                            ? '#059669'
-                            : landmark.category === 'market'
-                            ? '#8b5cf6'
-                            : '#334155'
-                        }
-                        borderColor="#ffffff"
-                        glyphColor="#ffffff"
-                        scale={isSelected ? 1.3 : 0.95}
-                      />
+                      <div className="relative group cursor-pointer flex flex-col items-center">
+                        <span
+                          className={`absolute w-10 h-10 rounded-full animate-ping opacity-75 ${
+                            isAmber ? 'bg-amber-400' : 'bg-emerald-400'
+                          }`}
+                        />
+                        <div
+                          className={`relative px-2.5 py-1.5 rounded-2xl flex items-center gap-1.5 font-bold text-slate-950 shadow-2xl border-2 border-white ${
+                            isAmber
+                              ? 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-amber-500/50'
+                              : 'bg-gradient-to-r from-emerald-400 to-teal-500 shadow-emerald-500/50'
+                          }`}
+                        >
+                          {data.hotelIcon === 'mountain' ? (
+                            <Mountain className="w-4 h-4 text-slate-950" />
+                          ) : (
+                            <Building className="w-4 h-4 text-slate-950" />
+                          )}
+                          <span className="text-[11px] whitespace-nowrap font-serif">
+                            ★ {data.name}
+                          </span>
+                        </div>
+                      </div>
                     </AdvancedMarker>
-                  );
-                })}
 
-                {/* Hotel InfoWindow when NO destination is selected */}
-                {!activeLandmark && isInfoWindowOpen && (
-                  <InfoWindow
-                    position={data.center}
-                    onCloseClick={() => setIsInfoWindowOpen(false)}
-                    maxWidth={320}
-                  >
-                    <div className="p-1.5 text-slate-900">
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Our Hotel · Direct Navigation
-                        </span>
-                        <span className="text-[10px] font-semibold text-slate-500 ml-auto">
-                          {data.id === 'gangtok' ? '5.0 ★ Google' : '3.3 ★ Google'}
-                        </span>
-                      </div>
+                    {/* Destinations Advanced Markers */}
+                    {filteredLandmarks.map((landmark) => {
+                      const isSelected = landmark.id === activeLandmark?.id;
 
-                      <h4 className="font-serif font-bold text-sm leading-tight text-slate-950 mb-1">
-                        ★ {data.name}
-                      </h4>
+                      return (
+                        <AdvancedMarker
+                          key={landmark.id}
+                          position={{ lat: landmark.lat, lng: landmark.lng }}
+                          title={`${landmark.name} (${landmark.distance})`}
+                          zIndex={isSelected ? 35 : 20}
+                          onClick={() => {
+                            setSelectedLandmarkId(landmark.id);
+                            setIsInfoWindowOpen(true);
+                          }}
+                        >
+                          <Pin
+                            background={
+                              isSelected
+                                ? isAmber
+                                  ? '#f59e0b'
+                                  : '#10b981'
+                                : landmark.category === 'pass'
+                                ? '#0284c7'
+                                : landmark.category === 'medical'
+                                ? '#e11d48'
+                                : landmark.category === 'transit'
+                                ? '#059669'
+                                : landmark.category === 'market'
+                                ? '#8b5cf6'
+                                : '#334155'
+                            }
+                            borderColor="#ffffff"
+                            glyphColor="#ffffff"
+                            scale={isSelected ? 1.3 : 0.95}
+                          />
+                        </AdvancedMarker>
+                      );
+                    })}
 
-                      <p className="text-[11px] text-slate-600 leading-snug mb-2">
-                        {data.address}
-                      </p>
-
-                      <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-800 font-medium mb-2.5">
-                        Opening Google Maps will navigate directly from your current location to our hotel.
-                      </div>
-
-                      <a
-                        href={hotelDirectionsFromCurrentLocationUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block text-center py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-bold shadow-md transition-all active:scale-[0.98]"
+                    {/* Hotel InfoWindow when NO destination is selected */}
+                    {!activeLandmark && isInfoWindowOpen && (
+                      <InfoWindow
+                        position={data.center}
+                        onCloseClick={() => setIsInfoWindowOpen(false)}
+                        maxWidth={320}
                       >
-                        Navigate from My Location to Hotel →
-                      </a>
-                    </div>
-                  </InfoWindow>
-                )}
+                        <div className="p-1.5 text-slate-900">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Our Hotel · Direct Navigation
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-500 ml-auto">
+                              {data.id === 'gangtok' ? '5.0 ★ Google' : '3.3 ★ Google'}
+                            </span>
+                          </div>
 
-                {/* Active Landmark InfoWindow */}
-                {activeLandmark && isInfoWindowOpen && (
-                  <InfoWindow
-                    position={{ lat: activeLandmark.lat, lng: activeLandmark.lng }}
-                    onCloseClick={() => setIsInfoWindowOpen(false)}
-                    maxWidth={300}
-                  >
-                    <div className="p-1 text-slate-900">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
-                          {activeLandmark.categoryLabel}
+                          <h4 className="font-serif font-bold text-sm leading-tight text-slate-950 mb-1">
+                            ★ {data.name}
+                          </h4>
+
+                          <p className="text-[11px] text-slate-600 leading-snug mb-2">
+                            {data.address}
+                          </p>
+
+                          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-800 font-medium mb-2.5">
+                            Opening Google Maps will navigate directly from your current location to our hotel.
+                          </div>
+
+                          <a
+                            href={hotelDirectionsFromCurrentLocationUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block text-center py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-bold shadow-md transition-all active:scale-[0.98]"
+                          >
+                            Navigate from My Location to Hotel →
+                          </a>
+                        </div>
+                      </InfoWindow>
+                    )}
+
+                    {/* Active Landmark InfoWindow */}
+                    {activeLandmark && isInfoWindowOpen && (
+                      <InfoWindow
+                        position={{ lat: activeLandmark.lat, lng: activeLandmark.lng }}
+                        onCloseClick={() => setIsInfoWindowOpen(false)}
+                        maxWidth={300}
+                      >
+                        <div className="p-1 text-slate-900">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
+                              {activeLandmark.categoryLabel}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-500 font-bold ml-auto">
+                              {activeLandmark.distance}
+                            </span>
+                          </div>
+
+                          <h4 className="font-serif font-bold text-sm leading-tight text-slate-950">
+                            {activeLandmark.name}
+                          </h4>
+
+                          <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-snug">
+                            {activeLandmark.description}
+                          </p>
+
+                          <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-[10px] font-semibold text-slate-700">
+                            <span>Drive: {activeLandmark.driveTime}</span>
+                            <span>Walk: {activeLandmark.walkTime}</span>
+                          </div>
+
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+                              data.address
+                            )}&destination=${encodeURIComponent(
+                              `${activeLandmark.lat},${activeLandmark.lng}`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2.5 block text-center py-1.5 px-3 rounded-lg bg-slate-950 text-white text-[11px] font-bold hover:bg-slate-800 transition-colors"
+                          >
+                            Navigate with Google Maps →
+                          </a>
+                        </div>
+                      </InfoWindow>
+                    )}
+                  </Map>
+
+                  {/* In-Map Short Map Metric Badge */}
+                  {activeLandmark ? (
+                    <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                      <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 text-white shadow-xl flex items-center gap-2 text-xs">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            isAmber ? 'bg-amber-400' : 'bg-emerald-400'
+                          } animate-pulse`}
+                        />
+                        <span className="font-semibold truncate max-w-[160px] sm:max-w-[220px]">
+                          {activeLandmark.name}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-500 font-bold ml-auto">
+                        <span className="text-white/40">|</span>
+                        <span
+                          className={`font-mono font-bold ${
+                            isAmber ? 'text-amber-400' : 'text-emerald-400'
+                          }`}
+                        >
                           {activeLandmark.distance}
                         </span>
                       </div>
-
-                      <h4 className="font-serif font-bold text-sm leading-tight text-slate-950">
-                        {activeLandmark.name}
-                      </h4>
-
-                      <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-snug">
-                        {activeLandmark.description}
-                      </p>
-
-                      <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-[10px] font-semibold text-slate-700">
-                        <span>Drive: {activeLandmark.driveTime}</span>
-                        <span>Walk: {activeLandmark.walkTime}</span>
-                      </div>
-
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
-                          data.address
-                        )}&destination=${encodeURIComponent(
-                          `${activeLandmark.lat},${activeLandmark.lng}`
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2.5 block text-center py-1.5 px-3 rounded-lg bg-slate-950 text-white text-[11px] font-bold hover:bg-slate-800 transition-colors"
-                      >
-                        Navigate with Google Maps →
-                      </a>
                     </div>
-                  </InfoWindow>
-                )}
-              </Map>
-
-              {/* In-Map Short Map Metric Badge */}
-              {activeLandmark ? (
-                <div className="absolute top-3 left-3 z-10 pointer-events-none">
-                  <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 text-white shadow-xl flex items-center gap-2 text-xs">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isAmber ? 'bg-amber-400' : 'bg-emerald-400'
-                      } animate-pulse`}
-                    />
-                    <span className="font-semibold truncate max-w-[160px] sm:max-w-[220px]">
-                      {activeLandmark.name}
-                    </span>
-                    <span className="text-white/40">|</span>
-                    <span
-                      className={`font-mono font-bold ${
-                        isAmber ? 'text-amber-400' : 'text-emerald-400'
-                      }`}
-                    >
-                      {activeLandmark.distance}
-                    </span>
-                  </div>
-                </div>
+                  ) : (
+                    <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                      <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 text-white shadow-xl flex items-center gap-2 text-xs">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        <span className="font-bold text-amber-400">Hotel Pointed:</span>
+                        <span className="font-semibold truncate max-w-[160px] sm:max-w-[220px]">
+                          {data.name}
+                        </span>
+                        <span className="text-white/40">|</span>
+                        <span className="text-[10px] text-emerald-300 font-mono">
+                          Current Location Navigation
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="absolute top-3 left-3 z-10 pointer-events-none">
-                  <div className="px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 text-white shadow-xl flex items-center gap-2 text-xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="font-bold text-amber-400">Hotel Pointed:</span>
-                    <span className="font-semibold truncate max-w-[160px] sm:max-w-[220px]">
-                      {data.name}
-                    </span>
-                    <span className="text-white/40">|</span>
-                    <span className="text-[10px] text-emerald-300 font-mono">
-                      Current Location Navigation
-                    </span>
-                  </div>
-                </div>
+                <FallbackMapPreview
+                  data={data}
+                  activeLandmark={activeLandmark}
+                  isAmber={isAmber}
+                  isNight={isNight}
+                  hotelDirectionsFromCurrentLocationUrl={hotelDirectionsFromCurrentLocationUrl}
+                  activeCallLink={activeCallLink}
+                  onClearLandmark={() => {
+                    setSelectedLandmarkId(null);
+                    setIsInfoWindowOpen(true);
+                  }}
+                />
               )}
             </div>
 

@@ -289,10 +289,33 @@ function MainAppContent() {
 }
 
 export default function App() {
-  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const rawKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const mapsApiKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+
+  // If no maps key is configured, render without APIProvider to avoid Google's MissingKeyMapError popup on live sites
+  if (!mapsApiKey) {
+    return (
+      <ThemeProvider>
+        <ContactProvider>
+          <TouristSpotsProvider>
+            <MainAppContent />
+          </TouristSpotsProvider>
+        </ContactProvider>
+      </ThemeProvider>
+    );
+  }
 
   return (
-    <APIProvider apiKey={mapsApiKey} libraries={['places', 'marker']}>
+    <APIProvider
+      apiKey={mapsApiKey}
+      libraries={['places', 'marker']}
+      onError={(err) => {
+        console.warn('Google Maps APIProvider error:', err);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('google-maps-auth-failure'));
+        }
+      }}
+    >
       <ThemeProvider>
         <ContactProvider>
           <TouristSpotsProvider>
